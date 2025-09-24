@@ -133,7 +133,6 @@ const exportToPDF = () => {
   }
 };
 
-
   // Exportar dashboard para PDF
   const exportDashboardToPDF = async () => {
     if (!dashboardRef.current) return;
