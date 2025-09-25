@@ -83,7 +83,7 @@ const Index = () => {
               <p className="text-white/80">AgoHa Conveniência</p>
             </div>
           </div>
-          gma <div className="flex gap-2 items-center">
+                    <div className="flex gap-2 items-center">
             <ExportButtons leads={leads} stats={stats} dashboardRef={dashboardRef} />
             <ImportLeads onImportLeads={(importedLeads) => setLeads(prev => [...prev, ...importedLeads])} />
             <LeadForm onAddLead={handleAddLead} />
