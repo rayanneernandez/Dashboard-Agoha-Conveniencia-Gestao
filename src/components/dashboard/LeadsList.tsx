@@ -1,3 +1,4 @@
+// LeadsList.tsx
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,28 +6,50 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Search, Users, Phone, Mail, MapPin, Edit, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Search, Users, Phone, Mail, MapPin, Trash2 } from "lucide-react";
 import EditLeadDialog from "./EditLeadDialog";
-import LeadForm from "./LeadForm";
 import { Lead, ESTADOS_BRASILEIROS } from "@/types/lead";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 
-const LeadsList = () => {
-  const [leads, setLeads] = useState<Lead[]>([]);
+interface LeadsListProps {
+  leads?: Lead[];
+}
+
+const LeadsList: React.FC<LeadsListProps> = ({ leads: initialLeads = [] }) => {
+  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
   const [filterEstado, setFilterEstado] = useState("todos");
 
-  // 🔎 Buscar leads
+  // Buscar leads do Supabase
   const fetchLeads = async () => {
-    const { data, error } = await supabase.from("leads").select("*");
-    if (error) {
-      console.error("Erro ao buscar leads:", error.message);
-      toast.error("Erro ao carregar leads");
-    } else {
-      setLeads(data as Lead[]);
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from("leads").select("*");
+      if (error) {
+        console.error("Erro ao buscar leads:", error);
+        toast.error(`Erro ao carregar leads: ${error.message}`);
+        return;
+      }
+      setLeads(data || []);
+    } catch (err) {
+      console.error("Erro inesperado:", err);
+      toast.error("Erro inesperado ao carregar leads");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -34,29 +57,39 @@ const LeadsList = () => {
     fetchLeads();
   }, []);
 
-  // ✏️ Editar lead
+  // Editar lead
   const handleEditLead = async (id: string, leadData: Partial<Lead>) => {
-    const { error } = await supabase.from("leads").update(leadData).eq("id", id);
-    if (error) {
-      toast.error("Erro ao atualizar lead");
-    } else {
+    try {
+      const { error } = await supabase.from("leads").update(leadData).eq("id", id);
+      if (error) {
+        toast.error("Erro ao atualizar lead: " + error.message);
+        return;
+      }
       toast.success("Lead atualizado com sucesso!");
       fetchLeads();
+    } catch (err) {
+      console.error("Erro ao atualizar lead:", err);
+      toast.error("Erro inesperado ao atualizar lead");
     }
   };
 
-  // ❌ Deletar lead
+  // Excluir lead
   const handleDeleteLead = async (id: string) => {
-    const { error } = await supabase.from("leads").delete().eq("id", id);
-    if (error) {
-      toast.error("Erro ao excluir lead");
-    } else {
+    try {
+      const { error } = await supabase.from("leads").delete().eq("id", id);
+      if (error) {
+        toast.error("Erro ao excluir lead: " + error.message);
+        return;
+      }
+      setLeads(prev => prev.filter((lead) => lead.id !== id));
       toast.success("Lead excluído com sucesso!");
-      setLeads(leads.filter((lead) => lead.id !== id));
+    } catch (err) {
+      console.error("Erro ao excluir lead:", err);
+      toast.error("Erro inesperado ao excluir lead");
     }
   };
 
-  // 🔍 Filtros
+  // Filtros
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch =
       lead.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -75,7 +108,6 @@ const LeadsList = () => {
     return matchesSearch && matchesStatus && matchesEstado;
   });
 
-  // 🏷️ Badges
   const getStatusBadge = (status: string) =>
     status.toLowerCase() === "ativo" ? <Badge variant="default">Ativo</Badge> : <Badge variant="outline">Inativo</Badge>;
 
@@ -84,16 +116,15 @@ const LeadsList = () => {
 
   return (
     <Card className="shadow-card border-0">
-<CardHeader className="bg-gradient-total text-primary-foreground rounded-t-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-  <div className="flex items-center gap-2">
-    <Users className="h-5 w-5" />
-    <CardTitle>Lista de Leads</CardTitle>
-  </div>
-  <CardDescription className="text-primary-foreground/80 mt-2 md:mt-0">
-    Gerencie todos os seus leads cadastrados
-  </CardDescription>
-</CardHeader>
-
+      <CardHeader className="bg-gradient-total text-primary-foreground rounded-t-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          <CardTitle>Lista de Leads</CardTitle>
+        </div>
+        <CardDescription className="text-primary-foreground/80 mt-2 md:mt-0">
+          Gerencie todos os seus leads cadastrados
+        </CardDescription>
+      </CardHeader>
 
       <CardContent className="p-6">
         {/* Filtros */}
@@ -221,7 +252,6 @@ const LeadsList = () => {
           </Table>
         </div>
 
-        {/* Nenhum lead */}
         {filteredLeads.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />

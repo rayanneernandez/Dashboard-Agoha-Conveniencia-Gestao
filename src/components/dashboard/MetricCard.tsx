@@ -6,23 +6,32 @@ interface MetricCardProps {
   value: number | string;
   description?: string;
   icon: LucideIcon;
-  variant?: "total" | "success" | "danger" | "warning" | "info";
+  variant?: "total" | "success" | "danger" | "warning" | "info" | "purple";
+  className?: string; // <--- Permite passar classes externas
 }
 
-const variantGradients = {
+const variantGradients: Record<string, string> = {
   total: "bg-gradient-total",
   success: "bg-gradient-success",
   danger: "bg-gradient-danger",
   warning: "bg-gradient-warning",
   info: "bg-gradient-info",
+  purple: "bg-gradient-projecao", // adicionando seu roxo personalizado
 };
 
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, description, icon: Icon, variant = "total" }) => {
+const MetricCard: React.FC<MetricCardProps> = ({
+  title,
+  value,
+  description,
+  icon: Icon,
+  variant = "total",
+  className = "",
+}) => {
   const gradientClass = variantGradients[variant] || variantGradients.total;
 
   return (
     <div
-      className={`p-4 rounded-xl shadow-card card-hover text-white ${gradientClass}`}
+      className={`p-4 rounded-xl shadow-card card-hover text-white ${gradientClass} ${className}`}
     >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">{title}</h3>
