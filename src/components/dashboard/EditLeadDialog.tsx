@@ -10,45 +10,64 @@ import { Edit } from "lucide-react";
 
 interface EditLeadDialogProps {
   lead: Lead;
-  onEditLead: (id: string, leadData: Omit<Lead, 'id' | 'dataCriacao' | 'dataUltimaAtualizacao'>) => void;
+  onEditLead: (
+    id: string,
+    leadData: Omit<Lead, 'id' | 'dataCriacao' | 'dataUltimaAtualizacao' | 'coordenadas'>
+  ) => void;
 }
 
 const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
-    nome: lead.nome,
-    empresa: lead.empresa,
-    email: lead.email,
-    telefone: lead.telefone,
-    endereco: lead.endereco,
-    cidade: lead.cidade,
-    estado: lead.estado,
-    regiao: lead.regiao,
-    status: lead.status,
-    temperatura: lead.temperatura,
-    detalhesStatus: lead.detalhesStatus,
-    coordenadas: lead.coordenadas
+    nome: lead.nome || "",
+    empresa: lead.empresa || "",
+    email: lead.email || "",
+    telefone: lead.telefone || "",
+    endereco: lead.endereco || "",
+    cidade: lead.cidade || "",
+    estado: lead.estado || "",
+    regiao: lead.regiao || "",
+    status: lead.status || "",
+    temperatura: lead.temperatura || "",
+    detalhesStatus: lead.detalhesStatus || "",
   });
 
   const estados = [
-    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+    'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG',
+    'PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'
   ];
 
   const regioes = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul'];
 
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.nome || !formData.empresa || !formData.email) {
+      alert("Por favor, preencha os campos obrigatórios: Nome, Empresa e Email.");
       return;
     }
 
-    onEditLead(lead.id, formData);
-    setOpen(false);
-  };
+    // Criar o objeto leadData com cast correto para os tipos esperados
+    const leadData: Omit<Lead, 'id' | 'dataCriacao' | 'dataUltimaAtualizacao' | 'coordenadas'> = {
+      nome: formData.nome,
+      empresa: formData.empresa,
+      email: formData.email,
+      telefone: formData.telefone,
+      endereco: formData.endereco,
+      cidade: formData.cidade,
+      estado: formData.estado,
+      regiao: formData.regiao as Lead['regiao'],
+      status: formData.status as Lead['status'],
+      temperatura: formData.temperatura as Lead['temperatura'],
+      detalhesStatus: formData.detalhesStatus,
+    };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    onEditLead(lead.id, leadData);
+    setOpen(false);
   };
 
   return (
@@ -58,11 +77,12 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
           <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
+
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Lead</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -74,7 +94,6 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 required
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="empresa">Empresa *</Label>
               <Input
@@ -84,7 +103,6 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 required
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="email">Email *</Label>
               <Input
@@ -95,7 +113,6 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 required
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="telefone">Telefone</Label>
               <Input
@@ -104,7 +121,6 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 onChange={(e) => handleInputChange('telefone', e.target.value)}
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="cidade">Cidade</Label>
               <Input
@@ -113,7 +129,6 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 onChange={(e) => handleInputChange('cidade', e.target.value)}
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="estado">Estado</Label>
               <Select value={formData.estado} onValueChange={(value) => handleInputChange('estado', value)}>
@@ -122,14 +137,11 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 </SelectTrigger>
                 <SelectContent>
                   {estados.map((estado) => (
-                    <SelectItem key={estado} value={estado}>
-                      {estado}
-                    </SelectItem>
+                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="regiao">Região</Label>
               <Select value={formData.regiao} onValueChange={(value) => handleInputChange('regiao', value)}>
@@ -138,14 +150,11 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 </SelectTrigger>
                 <SelectContent>
                   {regioes.map((regiao) => (
-                    <SelectItem key={regiao} value={regiao}>
-                      {regiao}
-                    </SelectItem>
+                    <SelectItem key={regiao} value={regiao}>{regiao}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
@@ -158,7 +167,6 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 </SelectContent>
               </Select>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="temperatura">Temperatura</Label>
               <Select value={formData.temperatura} onValueChange={(value) => handleInputChange('temperatura', value)}>
@@ -172,7 +180,7 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
               </Select>
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="endereco">Endereço</Label>
             <Input
@@ -181,7 +189,7 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
               onChange={(e) => handleInputChange('endereco', e.target.value)}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="detalhesStatus">Detalhes do Status</Label>
             <Textarea
@@ -191,7 +199,7 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
               rows={3}
             />
           </div>
-          
+
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar

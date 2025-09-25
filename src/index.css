@@ -2,155 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dashboard de Leads - Sistema completo de gestão
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    /* Base colors */
-    --background: 240 10% 98%;
+    --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-
-    /* Cards and surfaces */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-
-    /* Brand colors - Dashboard theme */
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 217 91% 70%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
+    --primary: 346 97% 32%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 341 86% 52%;
+    --secondary-foreground: 210 40% 98%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
-
-    /* Status colors */
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    --success-glow: 142 76% 46%;
-
-    --danger: 0 84% 60%;
-    --danger-foreground: 0 0% 100%;
-    --danger-glow: 0 84% 70%;
-
-    --warning: 25 95% 53%;
-    --warning-foreground: 0 0% 100%;
-    --warning-glow: 25 95% 63%;
-
-    --info: 271 81% 56%;
-    --info-foreground: 0 0% 100%;
-    --info-glow: 271 81% 66%;
-
-    /* Interface elements */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 217 91% 60%;
-
+    --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-
-    /* Gradients for dashboard cards */
-    --gradient-total: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(var(--success-glow)));
-    --gradient-danger: linear-gradient(135deg, hsl(var(--danger)), hsl(var(--danger-glow)));
-    --gradient-warning: linear-gradient(135deg, hsl(var(--warning)), hsl(var(--warning-glow)));
-    --gradient-info: linear-gradient(135deg, hsl(var(--info)), hsl(var(--info-glow)));
-
-    /* Shadows */
-    --shadow-card: 0 4px 6px -1px hsl(var(--primary) / 0.1), 0 2px 4px -1px hsl(var(--primary) / 0.06);
-    --shadow-success: 0 4px 14px -2px hsl(var(--success) / 0.2);
-    --shadow-danger: 0 4px 14px -2px hsl(var(--danger) / 0.2);
-    --shadow-warning: 0 4px 14px -2px hsl(var(--warning) / 0.2);
-    --shadow-info: 0 4px 14px -2px hsl(var(--info) / 0.2);
-
-    /* Animations */
-    --transition-all: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
+}
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+/* Gradiente da Navbar */
+.bg-gradient-header {
+  background: linear-gradient(135deg, #580825 0%, #8B0235 100%);
+}
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+/* Gradientes alternados e escuros para os cards */
+.bg-gradient-total {
+  background: linear-gradient(135deg, #A3023D 0%, #8B0235 100%);
+}
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+.bg-gradient-success {
+  background: linear-gradient(135deg, #00662E 0%, #007F39 100%);
+}
 
-    --primary: 217 91% 65%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --primary-glow: 217 91% 75%;
+.bg-gradient-danger {
+  background: linear-gradient(135deg, #6B0000 0%, #8B0000 100%);
+}
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+.bg-gradient-warning {
+  background: linear-gradient(135deg, #B34700 0%, #CC5200 100%);
+}
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+.bg-gradient-info {
+  background: linear-gradient(135deg, #005F30 0%, #007F3D 100%);
+}
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+.bg-gradient-projecao {
+  background: linear-gradient(135deg, #4B0082 0%, #6A0DAD 100%);
+}
 
-    --success: 142 76% 40%;
-    --success-glow: 142 76% 50%;
+/* Sombra dos cards */
+.shadow-card {
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.04);
+}
 
-    --danger: 0 84% 65%;
-    --danger-glow: 0 84% 75%;
+/* Hover suave */
+.card-hover {
+  transition: all 0.3s ease;
+}
 
-    --warning: 25 95% 58%;
-    --warning-glow: 25 95% 68%;
-
-    --info: 271 81% 61%;
-    --info-glow: 271 81% 71%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 217 91% 65%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 12px -1px rgba(0,0,0,0.08), 0 4px 6px -1px rgba(0,0,0,0.05);
 }
