@@ -24,28 +24,6 @@ interface ViaCEPResponse {
   erro?: boolean;
 }
 
-// 🔹 Atualize a interface Lead se necessário
-export interface Lead {
-  id?: number;
-  nome: string;
-  empresa: string;
-  email?: string;
-  telefone?: string;
-  cep?: string;
-  endereco?: string;
-  numero?: string;
-  bairro?: string;
-  cidade?: string;
-  estado?: string;
-  status?: string;
-  temperatura?: string;
-  emProjecao?: boolean;
-  detalhesStatus?: string;
-  dataVisita?: string;
-  regiao?: string;      // ✅ adicionado
-  cepstatus?: string;   // ✅ adicionado
-}
-
 const LeadForm = ({ onLeadCreated }: LeadFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,7 +44,6 @@ const LeadForm = ({ onLeadCreated }: LeadFormProps) => {
     detalhesStatus: "",
     dataVisita: "",
     regiao: "",
-    cepstatus: "", // ✅ inicializado
   });
 
   // 🔎 Buscar endereço pelo CEP
@@ -107,32 +84,16 @@ const LeadForm = ({ onLeadCreated }: LeadFormProps) => {
 
     const estadoSelecionado = ESTADOS_BRASILEIROS.find((e) => e.sigla === formData.estado);
 
-    // 🔹 Mapeamento para nomes de colunas do Supabase
-    const newLeadDB = {
-      nome: formData.nome,
-      empresa: formData.empresa,
-      email: formData.email,
-      telefone: formData.telefone,
-      cep: formData.cep,
+    const newLead = {
+      ...formData,
       endereco: `${formData.endereco} ${formData.numero}`.trim(),
-      numero: formData.numero,
-      bairro: formData.bairro,
-      cidade: formData.cidade,
-      estado: formData.estado,
-      status: formData.status,
-      temperatura: formData.temperatura,
-      em_projecao: formData.emProjecao,
-      detalhes_status: formData.detalhesStatus,
-      data_visita: formData.dataVisita,
       regiao: estadoSelecionado?.regiao || "Sudeste",
-      cepstatus: "pendente", // se desejar registrar
     };
 
-    const { error } = await supabase.from("leads").insert([newLeadDB]);
+    const { error } = await supabase.from("leads").insert([newLead]);
 
     if (error) {
-      console.error("Erro Supabase:", error);
-      toast.error(`Erro ao cadastrar lead: ${error.message}`);
+      toast.error("Erro ao cadastrar lead");
       return;
     }
 
@@ -156,10 +117,10 @@ const LeadForm = ({ onLeadCreated }: LeadFormProps) => {
       detalhesStatus: "",
       dataVisita: "",
       regiao: "",
-      cepstatus: "",
     });
 
     setOpen(false);
+
     if (onLeadCreated) onLeadCreated();
   };
 
@@ -184,7 +145,196 @@ const LeadForm = ({ onLeadCreated }: LeadFormProps) => {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* ... restante do formulário permanece igual ... */}
+            {/* Nome e Empresa */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome *</Label>
+                <Input
+                  id="nome"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  placeholder="Nome do contato"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="empresa">Empresa *</Label>
+                <Input
+                  id="empresa"
+                  value={formData.empresa}
+                  onChange={(e) => setFormData({ ...formData, empresa: e.target.value })}
+                  placeholder="Nome da empresa"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Email e Telefone */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  value={formData.telefone}
+                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+            </div>
+
+            {/* CEP */}
+            <div className="space-y-2">
+              <Label htmlFor="cep">CEP</Label>
+              <div className="relative">
+                <Input
+                  id="cep"
+                  value={formData.cep}
+                  onChange={(e) => {
+                    const cep = e.target.value;
+                    setFormData({ ...formData, cep });
+                    handleCEPChange(cep);
+                  }}
+                  placeholder="00000-000"
+                  maxLength={9}
+                />
+                {loading && (
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Endereço e Número */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="endereco">Endereço</Label>
+                <Input
+                  id="endereco"
+                  value={formData.endereco}
+                  onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                  placeholder="Rua, Avenida, etc."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="numero">Número</Label>
+                <Input
+                    id="numero"
+                    value={formData.numero}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setFormData({ ...formData, numero: e.target.value })
+                    }
+                    placeholder="Número do endereço"
+                  />
+              </div>
+            </div>
+
+            {/* Bairro, Cidade, Estado */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bairro">Bairro</Label>
+                <Input
+                  id="bairro"
+                  value={formData.bairro}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setFormData({ ...formData, bairro: e.target.value })
+                  }
+                  placeholder="Bairro"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cidade">Cidade</Label>
+                <Input
+                  id="cidade"
+                  value={formData.cidade}
+                  onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                  placeholder="Cidade"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="estado">Estado *</Label>
+                <Select value={formData.estado} onValueChange={(value) => setFormData({ ...formData, estado: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ESTADOS_BRASILEIROS.map((estado) => (
+                      <SelectItem key={estado.sigla} value={estado.sigla}>
+                        {estado.nome} ({estado.sigla})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Data da Visita */}
+            <div className="space-y-2">
+              <Label htmlFor="dataVisita">Data da Visita</Label>
+              <Input
+                id="dataVisita"
+                type="date"
+                value={formData.dataVisita}
+                onChange={(e) => setFormData({ ...formData, dataVisita: e.target.value })}
+              />
+            </div>
+
+            {/* Status, Temperatura e Projeção */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ativo">Ativo</SelectItem>
+                    <SelectItem value="Inativo">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="temperatura">Temperatura</Label>
+                <Select value={formData.temperatura} onValueChange={(value) => setFormData({ ...formData, temperatura: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Quente">Quente</SelectItem>
+                    <SelectItem value="Frio">Frio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="emProjecao"
+                checked={formData.emProjecao}
+                onCheckedChange={(checked) => setFormData({ ...formData, emProjecao: checked as boolean })}
+              />
+              <Label htmlFor="emProjecao">Lead em Projeção</Label>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="submit" className="bg-blue-600 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Cadastrar Lead
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

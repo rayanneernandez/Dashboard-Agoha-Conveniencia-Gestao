@@ -84,16 +84,16 @@ const LeadsList = () => {
 
   return (
     <Card className="shadow-card border-0">
-      <CardHeader className="bg-gradient-total text-primary-foreground rounded-t-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          <CardTitle>Lista de Leads</CardTitle>
-        </div>
-        <LeadForm onLeadCreated={fetchLeads} />
-        <CardDescription className="text-primary-foreground/80 mt-2 md:mt-0">
-          Gerencie todos os seus leads cadastrados
-        </CardDescription>
-      </CardHeader>
+<CardHeader className="bg-gradient-total text-primary-foreground rounded-t-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+  <div className="flex items-center gap-2">
+    <Users className="h-5 w-5" />
+    <CardTitle>Lista de Leads</CardTitle>
+  </div>
+  <CardDescription className="text-primary-foreground/80 mt-2 md:mt-0">
+    Gerencie todos os seus leads cadastrados
+  </CardDescription>
+</CardHeader>
+
 
       <CardContent className="p-6">
         {/* Filtros */}
