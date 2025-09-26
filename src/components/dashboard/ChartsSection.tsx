@@ -1,37 +1,48 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { TrendingUp, PieChart as PieChartIcon } from "lucide-react";
 import { Lead } from "@/types/lead";
-import { brandColors, chartColors } from "@/lib/colors";
 
 interface ChartsSectionProps {
   leads: Lead[];
+  dashboardRef: React.RefObject<HTMLDivElement>; // Apenas para exportar
 }
 
 const ACTIVE_COLORS = ["#A3023D", "#EB1E61", "#008E49", "#FF6900"];
 const INACTIVE_COLORS = ["#FF6900", "#008E49", "#EB1E61", "#A3023D"];
+const REGION_COLORS: Record<string, string> = {
+  Norte: "#3b82f6",
+  Nordeste: "#f97316",
+  "Centro-Oeste": "#eab308",
+  Sudeste: "#22c55e",
+  Sul: "#8b5cf6",
+};
 
-const ChartsSection = ({ leads }: ChartsSectionProps) => {
-  const estadosData = leads.reduce((acc, lead) => {
-    const estadoExistente = acc.find(item => item.estado === lead.estado);
-    if (estadoExistente) {
-      estadoExistente.total += 1;
-      if (lead.status === "Ativo") estadoExistente.ativos += 1;
-      else estadoExistente.inativos += 1;
-    } else {
-      acc.push({
-        estado: lead.estado,
-        total: 1,
-        ativos: lead.status === "Ativo" ? 1 : 0,
-        inativos: lead.status === "Inativo" ? 1 : 0,
-      });
-    }
-    return acc;
-  }, [] as Array<{ estado: string; total: number; ativos: number; inativos: number }>)
-  .sort((a, b) => b.total - a.total)
-  .slice(0, 8);
+const ChartsSection = ({ leads, dashboardRef }: ChartsSectionProps) => {
+  // Dados agregados por estado
+  const estadosData = leads.reduce(
+    (acc, lead) => {
+      const estadoExistente = acc.find((item) => item.estado === lead.estado);
+      if (estadoExistente) {
+        estadoExistente.total += 1;
+        if (lead.status === "Ativo") estadoExistente.ativos += 1;
+        else estadoExistente.inativos += 1;
+      } else {
+        acc.push({
+          estado: lead.estado,
+          total: 1,
+          ativos: lead.status === "Ativo" ? 1 : 0,
+          inativos: lead.status === "Inativo" ? 1 : 0,
+        });
+      }
+      return acc;
+    },
+    [] as Array<{ estado: string; total: number; ativos: number; inativos: number }>
+  ).sort((a, b) => b.total - a.total)
+   .slice(0, 8);
 
+  // Dados agregados por região
   const regiaoData = leads.reduce((acc, lead) => {
     acc[lead.regiao] = (acc[lead.regiao] || 0) + 1;
     return acc;
@@ -43,16 +54,8 @@ const ChartsSection = ({ leads }: ChartsSectionProps) => {
     percentage: leads.length > 0 ? ((total / leads.length) * 100).toFixed(1) : "0",
   }));
 
-  const COLORS = {
-    'Norte': '#3b82f6',
-    'Nordeste': '#f97316', 
-    'Centro-Oeste': '#eab308',
-    'Sudeste': '#22c55e',
-    'Sul': '#8b5cf6'
-  };
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div ref={dashboardRef} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Gráfico de Barras */}
       <Card className="shadow-card border-0 card-hover">
         <CardHeader className="bg-gradient-total text-white rounded-t-lg">
@@ -110,7 +113,10 @@ const ChartsSection = ({ leads }: ChartsSectionProps) => {
                 label={({ index }) => `${pieData[index].name} (${pieData[index].percentage}%)`}
               >
                 {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#8884d8'} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={REGION_COLORS[entry.name as keyof typeof REGION_COLORS] || "#8884d8"}
+                  />
                 ))}
               </Pie>
               <Tooltip />

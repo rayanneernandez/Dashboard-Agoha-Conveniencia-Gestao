@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Edit } from "lucide-react";
 
 // Cria um tipo extendido com campos extras
-type EditableLead = Omit<Lead, 'id' | 'dataCriacao' | 'dataUltimaAtualizacao' | 'coordenadas'> & {
+type EditableLead = Omit<Lead, 'id' | 'dataultimaatualizacao' | 'coordenadas'> & {
   cep?: string;
   numero?: string;
   bairro?: string;
@@ -25,7 +25,7 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
 
   const [formData, setFormData] = useState<EditableLead>({
     nome: lead.nome,
-    empresa: lead.empresa,
+    razaosocial: lead.razaosocial,
     email: lead.email,
     telefone: lead.telefone,
     endereco: lead.endereco,
@@ -47,8 +47,8 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nome || !formData.empresa || !formData.email) {
-      alert("Preencha os campos obrigatórios: Nome, Empresa e Email.");
+    if (!formData.nome || !formData.razaosocial || !formData.email) {
+      alert("Preencha os campos obrigatórios: Nome, Razão Social e Email.");
       return;
     }
 
@@ -76,8 +76,8 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
               <Input value={formData.nome} onChange={(e) => handleInputChange('nome', e.target.value)} required />
             </div>
             <div>
-              <Label>Empresa *</Label>
-              <Input value={formData.empresa} onChange={(e) => handleInputChange('empresa', e.target.value)} required />
+              <Label>Razão Social *</Label>
+              <Input value={formData.razaosocial} onChange={(e) => handleInputChange('razaosocial', e.target.value)} required />
             </div>
             <div>
               <Label>Email *</Label>

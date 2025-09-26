@@ -34,27 +34,27 @@
 
 /* Gradientes alternados e escuros para os cards */
 .bg-gradient-total {
-  background: linear-gradient(135deg, #A3023D 0%, #8B0235 100%);
+  background: #a3033d;
 }
 
 .bg-gradient-success {
-  background: linear-gradient(135deg, #00662E 0%, #007F39 100%);
+  background: #ff6801;
 }
 
 .bg-gradient-danger {
-  background: linear-gradient(135deg, #6B0000 0%, #8B0000 100%);
+  background: #eb1d61;
 }
 
 .bg-gradient-warning {
-  background: linear-gradient(135deg, #B34700 0%, #CC5200 100%);
+  background: #f7B223;
 }
 
 .bg-gradient-info {
-  background: linear-gradient(135deg, #005F30 0%, #007F3D 100%);
+  background: #921721;
 }
 
 .bg-gradient-projecao {
-  background: linear-gradient(135deg, #4B0082 0%, #6A0DAD 100%);
+  background: #008e49;
 }
 
 /* Sombra dos cards */

@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Download, FileSpreadsheet, FileText, ChevronDown } from "lucide-react";
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import html2canvas from 'html2canvas';
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import html2canvas from "html2canvas";
 import { Lead, DashboardStats } from "@/types/lead";
 import {
   DropdownMenu,
@@ -15,161 +15,172 @@ import {
 interface ExportButtonsProps {
   leads: Lead[];
   stats: DashboardStats;
-  dashboardRef: React.RefObject<HTMLDivElement>;
+  dashboardRef: React.RefObject<HTMLDivElement>; // Apenas os cards do dashboard
+  excludeFields?: string[];
 }
 
-const ExportButtons = ({ leads, stats, dashboardRef }: ExportButtonsProps) => {
-  // Exportar leads para Excel
+const ExportButtons = ({ leads, stats, dashboardRef, excludeFields = [] }: ExportButtonsProps) => {
+
+  // Exportar Leads para Excel
   const exportToExcel = () => {
     try {
-      const data = leads.map(lead => ({
-        Nome: lead.nome,
-        Empresa: lead.empresa,
-        Email: lead.email,
-        Telefone: lead.telefone,
-        Endereço: lead.endereco,
-        Cidade: lead.cidade,
-        Estado: lead.estado,
-        Região: lead.regiao,
-        Status: lead.status,
-        Temperatura: lead.temperatura,
-        'Em Projeção': lead.emProjecao ? 'Sim' : 'Não',
-        'Detalhes Status': lead.detalhesStatus,
-        'Data da Visita': lead.dataVisita || '',
-        'Data de Criação': lead.dataCriacao,
-        'Última Atualização': lead.dataUltimaAtualizacao
-      }));
+      const data = leads.map(lead => {
+        const copy = { ...lead };
+        excludeFields.forEach(field => delete (copy as any)[field]);
+        return {
+          Nome: copy.nome,
+          "Razão Social": copy.razaosocial,
+          Email: copy.email,
+          Telefone: copy.telefone,
+          Endereço: copy.endereco,
+          Numero: copy.numero,
+          Bairro: copy.bairro,
+          Cidade: copy.cidade,
+          Estado: copy.estado,
+          "Data da Última Visita": copy.dataVisita || "",
+          Status: copy.status,
+          Temperatura: copy.temperatura,
+          "Detalhes Status": copy.detalhesStatus
+        };
+      });
 
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Leads');
-      XLSX.writeFile(wb, 'leads.xlsx');
+      XLSX.utils.book_append_sheet(wb, ws, "Leads");
+
+      // Cabeçalho colorido
+      const range = XLSX.utils.decode_range(ws['!ref'] || '');
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cell = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
+        if (cell) {
+          cell.s = {
+            fill: { fgColor: { rgb: "660629" } },
+            font: { color: { rgb: "FFFFFF" }, bold: true },
+            alignment: { horizontal: "center" }
+          };
+        }
+      }
+
+      XLSX.writeFile(wb, "leads.xlsx");
     } catch (error) {
-      console.error('Erro ao exportar Excel:', error);
+      console.error("Erro ao exportar Excel:", error);
     }
   };
 
-  // Exportar leads para PDF (ajustado)
-const exportToPDF = () => {
-  try {
-    const doc = new jsPDF('l', 'mm', 'a4');
-    doc.setFont("helvetica");
+  // Exportar lista de Leads para PDF
+  const exportLeadsToPDF = () => {
+    try {
+      const doc = new jsPDF("l", "mm", "a4");
+      const tableData = leads.map(lead => [
+        lead.nome,
+        lead.razaosocial,
+        lead.email,
+        lead.telefone,
+        lead.endereco,
+        lead.numero,
+        lead.bairro,
+        lead.cidade,
+        lead.estado,
+        lead.dataVisita || "",
+        lead.status,
+        lead.temperatura,
+        lead.detalhesStatus || "-"
+      ]);
 
-    // Dados da tabela apenas com as colunas desejadas
-    const tableData = leads.map(lead => [
-      lead.nome,
-      lead.empresa,
-      lead.email,
-      lead.telefone,
-      `${lead.cidade}, ${lead.estado}`,
-      lead.regiao,
-      lead.status,
-      lead.temperatura,
-      lead.emProjecao ? 'Sim' : 'Não',
-      lead.detalhesStatus || '-',
-      lead.dataVisita || '-'
-    ]);
+      const head = [[
+        "Nome", "Razão Social", "Email", "Telefone", "Endereço", "Número", "Bairro", "Cidade", "Estado", "Data da Última Visita", "Status", "Temperatura", "Detalhes Status"
+      ]];
 
-    // Cabeçalho da tabela
-    const head = [[
-      'Nome',
-      'Empresa',
-      'Email',
-      'Telefone',
-      'Localização',
-      'Região',
-      'Status',
-      'Temperatura',
-      'Em Projeção',
-      'Detalhes Status',
-      'Data Visita'
-    ]];
+      autoTable(doc, {
+        head,
+        body: tableData,
+        styles: { fontSize: 8, cellPadding: 1, overflow: 'linebreak', font: 'helvetica', halign: 'center', valign: 'middle' },
+        headStyles: { fillColor: [102, 6, 41], textColor: 255, fontSize: 9, fontStyle: 'bold', halign: 'center' },
+        margin: { top: 20, left: 10, right: 10 },
+        theme: 'grid',
+        didDrawPage: () => {
+          doc.setFontSize(15);
+          doc.text("Lista de Leads", doc.internal.pageSize.getWidth() / 2, 12, { align: "center" });
+        }
+      });
 
-    autoTable(doc, {
-      head,
-      body: tableData,
-      styles: { 
-        fontSize: 8, 
-        cellPadding: 1, 
-        overflow: 'linebreak', 
-        font: 'helvetica', 
-        halign: 'center',  // centraliza o conteúdo da célula
-        valign: 'middle'
-      },
-      headStyles: { 
-        fillColor: [59, 130, 246], 
-        textColor: 255, 
-        fontSize: 8, 
-        fontStyle: 'bold',
-        halign: 'center'
-      },
-      columnStyles: {
-        0: { cellWidth: 25 }, // Nome
-        1: { cellWidth: 25 }, // Empresa
-        2: { cellWidth: 35 }, // Email
-        3: { cellWidth: 20 }, // Telefone
-        4: { cellWidth: 30 }, // Localização
-        5: { cellWidth: 15 }, // Região
-        6: { cellWidth: 15 }, // Status
-        7: { cellWidth: 15 }, // Temperatura
-        8: { cellWidth: 15 }, // Em Projeção
-        9: { cellWidth: 30 }, // Detalhes Status
-        10: { cellWidth: 20 }  // Data Visita
-      },
-      margin: { top: 20, left: 10, right: 10 },
-      pageBreak: 'auto',
-      rowPageBreak: 'avoid',
-      theme: 'grid',
-      didDrawPage: (data) => {
-        // Adicionar título na página
-        doc.setFontSize(15);
-        doc.text('Lista de Leads', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
-      }
-    });
+      doc.save("lista-leads.pdf");
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+    }
+  };
 
-    doc.save('lista-leads.pdf');
-  } catch (error) {
-    console.error('Erro ao exportar PDF:', error);
-  }
-};
-
-  // Exportar dashboard para PDF
+  // Exportar Dashboard para PDF (apenas cards e gráficos)
   const exportDashboardToPDF = async () => {
     if (!dashboardRef.current) return;
-
     try {
-      const canvas = await html2canvas(dashboardRef.current, { scale: 2, useCORS: true, logging: false });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('l', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const element = dashboardRef.current;
+      
+      // Configurações para melhor qualidade
+      const canvas = await html2canvas(element, {
+        scale: 2, // Aumenta a qualidade
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#F8F9FA',
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight
+      });
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Criar PDF em paisagem para melhor ajuste
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
+      // Calcular dimensões mantendo proporção
+      const ratio = canvas.width / canvas.height;
+      let imgWidth = pageWidth - 20; // margem de 10mm em cada lado
+      let imgHeight = imgWidth / ratio;
+      
+      // Se a altura for maior que a página, ajustar
+      if (imgHeight > pageHeight - 20) {
+        imgHeight = pageHeight - 20;
+        imgWidth = imgHeight * ratio;
+      }
+      
+      // Centralizar na página
+      const x = (pageWidth - imgWidth) / 2;
+      const y = (pageHeight - imgHeight) / 2;
+      
+      // Adicionar título
+      pdf.setFontSize(16);
+      pdf.setTextColor(102, 6, 41); // Cor do título (#660629)
+      pdf.text('Dashboard de Leads', pageWidth / 2, 15, { align: 'center' });
+      
+      // Adicionar imagem
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+      
       pdf.save('dashboard.pdf');
     } catch (error) {
       console.error('Erro ao exportar dashboard:', error);
+      
     }
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2 text-blue-600 hover:text-blue-600">
+        <Button variant="outline" className="bg-white text-[#660629] border border-[#660629] shadow-card hover:bg-[#fce4ec] hover:scale-105 transition-all duration-300 flex items-center gap-2">
           <Download className="h-4 w-4" />
           Exportar
-          <ChevronDown className="h-4 w-4 ml-1" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2 hover:text-blue-600">
+        <DropdownMenuItem onClick={exportToExcel} className="flex items-center gap-2 text-[#660629] hover:text-[#660629]">
           <FileSpreadsheet className="h-4 w-4" />
           Exportar para Excel
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2 hover:text-blue-600">
+        <DropdownMenuItem onClick={exportLeadsToPDF} className="flex items-center gap-2 text-[#660629] hover:text-[#660629]">
           <FileText className="h-4 w-4" />
           Exportar Lista em PDF
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={exportDashboardToPDF} className="flex items-center gap-2 hover:text-blue-600">
+        <DropdownMenuItem onClick={exportDashboardToPDF} className="flex items-center gap-2 text-[#660629] hover:text-[#660629]">
           <Download className="h-4 w-4" />
           Exportar Dashboard em PDF
         </DropdownMenuItem>

@@ -1,20 +1,21 @@
 export interface Lead {
   id: string;
   nome: string;
-  empresa: string;
+  razaosocial: string;
   email: string;
   telefone: string;
   endereco: string;
+  numero: string;
+  bairro: string;
   cidade: string;
   estado: string;
   regiao: 'Norte' | 'Nordeste' | 'Centro-Oeste' | 'Sudeste' | 'Sul';
   status: 'Ativo' | 'Inativo';
   temperatura: 'Quente' | 'Frio';
-  emProjecao: boolean; // Novo campo
+  emProjecao: boolean;
   detalhesStatus: string;
-  dataVisita?: string; // Novo campo opcional para data da visita
-  dataCriacao: string;
-  dataUltimaAtualizacao: string;
+  dataVisita?: string;
+  dataultimaatualizacao?: string; 
   coordenadas?: {
     lat: number;
     lng: number;
@@ -27,7 +28,7 @@ export interface DashboardStats {
   leadsInativos: number;
   leadsQuentes: number;
   leadsFrios: number;
-  leadsEmProjecao: number; // Novo campo
+  leadsEmProjecao: number;
   distribuicaoPorRegiao: {
     Norte: number;
     Nordeste: number;

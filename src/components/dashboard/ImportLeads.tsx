@@ -23,23 +23,24 @@ const ImportLeads = ({ onImportLeads }: ImportLeadsProps) => {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-      const importedLeads: Lead[] = jsonData.map(row => ({
+      const importedLeads: Lead[] = jsonData.map((row) => ({
         id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
         nome: row["Nome"] || "",
-        empresa: row["Empresa"] || "",
+        razaosocial: row["Razão Social"] || row["Empresa"] || "",
         email: row["Email"] || "",
         telefone: row["Telefone"] || "",
         endereco: row["Endereço"] || "",
+        numero: row["Número"] || "",
+        bairro: row["Bairro"] || "",
         cidade: row["Cidade"] || "",
         estado: row["Estado"] || "",
-        regiao: row["Região"] || "",
+        regiao: row["Região"] || "Sudeste",
         status: row["Status"] || "Ativo",
         temperatura: row["Temperatura"] || "Frio",
         emProjecao: row["Em Projeção"] === "Sim",
-        detalhesStatus: row["Detalhes Status"] || "",
+        detalhesStatus: row["Detalhes do Status"] || "",
         dataVisita: row["Data da Visita"] || "",
-        dataCriacao: new Date().toISOString().split("T")[0],
-        dataUltimaAtualizacao: new Date().toISOString().split("T")[0]
+        dataultimaatualizacao: new Date().toISOString()
       }));
 
       onImportLeads(importedLeads);
@@ -58,9 +59,8 @@ const ImportLeads = ({ onImportLeads }: ImportLeadsProps) => {
         onChange={handleFileChange}
       />
       <Button
-        variant="outline"
-        className="flex items-center gap-2 text-blue-600 hover:text-blue-600"
         onClick={() => fileInputRef.current?.click()}
+        className="bg-white text-[#660629] border border-[#660629] shadow-card hover:bg-[#fce4ec] hover:scale-105 transition-all duration-300 flex items-center gap-2"
       >
         <Upload className="h-4 w-4" />
         Importar
