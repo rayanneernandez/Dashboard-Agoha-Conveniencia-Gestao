@@ -111,7 +111,7 @@ const Index = () => {
   <div className="max-w-7xl mx-auto flex justify-between items-center gap-4">
     <div className="flex items-center gap-3">
       <img 
-        src="src/logo.png" 
+        src="/logo.png"
         alt="Logo AgHora" 
         className="h-16 md:h-10 w-auto object-contain flex-shrink-0" 
       />
