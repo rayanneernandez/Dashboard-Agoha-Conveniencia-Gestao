@@ -3,13 +3,29 @@ import { Lead, ESTADOS_BRASILEIROS } from "@/types/lead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Edit } from "lucide-react";
 
-// Cria um tipo extendido com campos extras
-type EditableLead = Omit<Lead, 'id' | 'dataultimaatualizacao' | 'coordenadas'> & {
+// Tipo para campos editáveis
+type EditableLead = Omit<
+  Lead,
+  "id" | "dataultimaatualizacao" | "coordenadas"
+> & {
   cep?: string;
   numero?: string;
   bairro?: string;
@@ -35,23 +51,27 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
     status: lead.status,
     temperatura: lead.temperatura,
     detalhesStatus: lead.detalhesStatus,
-    emProjecao: lead.emProjecao,
+    emProjecao: lead.emProjecao, // já carregado do lead
+    visitafeita: lead.visitafeita,
     cep: (lead as any).cep || "",
     numero: (lead as any).numero || "",
     bairro: (lead as any).bairro || "",
   });
 
-  const handleInputChange = <K extends keyof EditableLead>(field: K, value: EditableLead[K]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = <K extends keyof EditableLead>(
+    field: K,
+    value: EditableLead[K]
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nome || !formData.razaosocial || !formData.email) {
-      alert("Preencha os campos obrigatórios: Nome, Razão Social e Email.");
+    // Validação mínima
+    if (!formData.nome) {
+      alert("Preencha o campo obrigatório: Nome.");
       return;
     }
-
     onEditLead(lead.id, formData);
     setOpen(false);
   };
@@ -73,62 +93,122 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Nome *</Label>
-              <Input value={formData.nome} onChange={(e) => handleInputChange('nome', e.target.value)} required />
+              <Input
+                value={formData.nome}
+                onChange={(e) => handleInputChange("nome", e.target.value)}
+                required
+              />
             </div>
             <div>
-              <Label>Razão Social *</Label>
-              <Input value={formData.razaosocial} onChange={(e) => handleInputChange('razaosocial', e.target.value)} required />
+              <Label>Razão Social</Label>
+              <Input
+                value={formData.razaosocial}
+                onChange={(e) =>
+                  handleInputChange("razaosocial", e.target.value)
+                }
+              />
             </div>
             <div>
-              <Label>Email *</Label>
-              <Input type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
+              />
             </div>
             <div>
               <Label>Telefone</Label>
-              <Input value={formData.telefone} onChange={(e) => handleInputChange('telefone', e.target.value)} />
+              <Input
+                value={formData.telefone}
+                onChange={(e) => handleInputChange("telefone", e.target.value)}
+              />
             </div>
             <div>
               <Label>CEP</Label>
-              <Input value={formData.cep} onChange={(e) => handleInputChange('cep', e.target.value)} />
+              <Input
+                value={formData.cep}
+                onChange={(e) => handleInputChange("cep", e.target.value)}
+              />
             </div>
             <div>
               <Label>Endereço</Label>
-              <Input value={formData.endereco} onChange={(e) => handleInputChange('endereco', e.target.value)} />
+              <Input
+                value={formData.endereco}
+                onChange={(e) => handleInputChange("endereco", e.target.value)}
+              />
             </div>
             <div>
               <Label>Número</Label>
-              <Input value={formData.numero} onChange={(e) => handleInputChange('numero', e.target.value)} />
+              <Input
+                value={formData.numero}
+                onChange={(e) => handleInputChange("numero", e.target.value)}
+              />
             </div>
             <div>
               <Label>Bairro</Label>
-              <Input value={formData.bairro} onChange={(e) => handleInputChange('bairro', e.target.value)} />
+              <Input
+                value={formData.bairro}
+                onChange={(e) => handleInputChange("bairro", e.target.value)}
+              />
             </div>
             <div>
               <Label>Cidade</Label>
-              <Input value={formData.cidade} onChange={(e) => handleInputChange('cidade', e.target.value)} />
+              <Input
+                value={formData.cidade}
+                onChange={(e) => handleInputChange("cidade", e.target.value)}
+              />
             </div>
             <div>
               <Label>Estado</Label>
-              <Select value={formData.estado} onValueChange={(v) => handleInputChange('estado', v as typeof formData.estado)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={formData.estado}
+                onValueChange={(v) => handleInputChange("estado", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {ESTADOS_BRASILEIROS.map(e => <SelectItem key={e.sigla} value={e.sigla}>{e.nome}</SelectItem>)}
+                  {ESTADOS_BRASILEIROS.map((e) => (
+                    <SelectItem key={e.sigla} value={e.sigla}>
+                      {e.nome}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>Região</Label>
-              <Select value={formData.regiao} onValueChange={(v) => handleInputChange('regiao', v as typeof formData.regiao)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={formData.regiao}
+                onValueChange={(v) =>
+                  handleInputChange("regiao", v as typeof formData.regiao)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {['Norte','Nordeste','Centro-Oeste','Sudeste','Sul'].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"].map(
+                    (r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    )
+                  )}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label>Status</Label>
-              <Select value={formData.status} onValueChange={(v) => handleInputChange('status', v as typeof formData.status)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={formData.status}
+                onValueChange={(v) =>
+                  handleInputChange("status", v as "Ativo" | "Inativo")
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Ativo">Ativo</SelectItem>
                   <SelectItem value="Inativo">Inativo</SelectItem>
@@ -137,23 +217,68 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
             </div>
             <div>
               <Label>Temperatura</Label>
-              <Select value={formData.temperatura} onValueChange={(v) => handleInputChange('temperatura', v as typeof formData.temperatura)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={formData.temperatura}
+                onValueChange={(v) =>
+                  handleInputChange("temperatura", v as "Quente" | "Frio")
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Quente">Quente</SelectItem>
                   <SelectItem value="Frio">Frio</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label>Visita Feita</Label>
+              <Select
+                value={formData.visitafeita}
+                onValueChange={(v) =>
+                  handleInputChange("visitafeita", v as "Sim" | "Não")
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Sim">Sim</SelectItem>
+                  <SelectItem value="Não">Não</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <Checkbox
+                checked={formData.emProjecao}
+                onCheckedChange={(checked) =>
+                  handleInputChange("emProjecao", checked === true)
+                }
+              />
+              <Label>Projeção</Label>
+            </div>
           </div>
 
           <div>
             <Label>Detalhes do Status</Label>
-            <Textarea value={formData.detalhesStatus} onChange={(e) => handleInputChange('detalhesStatus', e.target.value)} rows={3} />
+            <Textarea
+              value={formData.detalhesStatus}
+              onChange={(e) =>
+                handleInputChange("detalhesStatus", e.target.value)
+              }
+              rows={3}
+            />
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
+              Cancelar
+            </Button>
             <Button type="submit">Salvar Alterações</Button>
           </div>
         </form>

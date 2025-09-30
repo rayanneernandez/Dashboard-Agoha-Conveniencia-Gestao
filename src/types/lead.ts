@@ -11,16 +11,46 @@ export interface Lead {
   estado: string;
   regiao: 'Norte' | 'Nordeste' | 'Centro-Oeste' | 'Sudeste' | 'Sul';
   status: 'Ativo' | 'Inativo';
-  temperatura: 'Quente' | 'Frio';
+  temperatura: 'Quente' | 'Frio' | null;
   emProjecao: boolean;
   detalhesStatus: string;
-  dataVisita?: string;
-  dataultimaatualizacao?: string; 
+  visitafeita: 'Sim' | 'Não'; // enum obrigatório para o banco
+  dataultimaatualizacao?: string;
+  
   coordenadas?: {
     lat: number;
     lng: number;
   };
 }
+
+export interface LeadFormData {
+  nome: string;
+  razaosocial: string;
+  email: string;
+  telefone: string;
+  endereco: string;
+  numero: string;
+  bairro: string;
+  cidade: string;
+  estado: Lead["estado"];
+  regiao: Lead["regiao"];
+  status: Lead["status"];
+  temperatura: Lead["temperatura"];
+  emProjecao: boolean;
+  detalhesStatus: string;
+  visitafeita: boolean; // boolean no formulário
+  coordenadas?: {
+    lat: number;
+    lng: number;
+  };
+}
+
+// Converte LeadFormData para Lead pronto pro banco
+export const mapLeadToDB = (data: LeadFormData & { dataultimaatualizacao?: string }): Omit<Lead, "id"> => ({
+  ...data,
+  visitafeita: data.visitafeita ? "Sim" : "Não",
+  dataultimaatualizacao: data.dataultimaatualizacao,
+});
 
 export interface DashboardStats {
   totalLeads: number;
@@ -32,7 +62,7 @@ export interface DashboardStats {
   distribuicaoPorRegiao: {
     Norte: number;
     Nordeste: number;
-    CentroOeste: number;
+    'Centro-Oeste': number;
     Sudeste: number;
     Sul: number;
   };
@@ -66,7 +96,7 @@ export const ESTADOS_BRASILEIROS = [
   { sigla: 'SP', nome: 'São Paulo', regiao: 'Sudeste' as const },
   { sigla: 'SE', nome: 'Sergipe', regiao: 'Nordeste' as const },
   { sigla: 'TO', nome: 'Tocantins', regiao: 'Norte' as const },
-];
+] as const;
 
 export const STATUS_OPTIONS = [
   'Loja operando',
@@ -76,5 +106,5 @@ export const STATUS_OPTIONS = [
   'Cancelou contrato ativo',
   'Em negociação',
   'Aguardando resposta',
-  'Outros'
-];
+  'Outros',
+] as const;

@@ -1,17 +1,28 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useState } from "react"; 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, UserPlus, Loader2 } from "lucide-react";
-import { Lead, ESTADOS_BRASILEIROS } from "@/types/lead";
+import { LeadFormData, ESTADOS_BRASILEIROS } from "@/types/lead";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabaseClient";
+import { Checkbox } from "@/components/ui/checkbox"; // ✅ adicionado
 
 interface LeadFormProps {
-  onAddLead?: (leadData: Omit<Lead, "id" | "dataultimaatualizacao">) => void;
+  onAddLead?: (leadData: LeadFormData) => void;
 }
 
 interface ViaCEPResponse {
@@ -24,54 +35,42 @@ interface ViaCEPResponse {
   erro?: boolean;
 }
 
-type TemperaturaForm = "Quente" | "Frio" | null;
-
 const LeadForm = ({ onAddLead }: LeadFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [formData, setFormData] = useState<
-    Omit<Lead, "id" | "dataultimaatualizacao"> & {
-      cep: string;
-      numero: string;
-      bairro: string;
-      temperatura: TemperaturaForm;
-    }
-  >({
+  const [formData, setFormData] = useState<LeadFormData>({
     nome: "",
     razaosocial: "",
     email: "",
     telefone: "",
-    cep: "",
     endereco: "",
     numero: "",
     bairro: "",
     cidade: "",
-    estado: "",
+    estado: "SP",
     regiao: "Sudeste",
     status: "Ativo",
     temperatura: null,
-    emProjecao: false,
+    emProjecao: false, // ✅ inicializado
     detalhesStatus: "",
-    dataVisita: "",
+    visitafeita: false,
   });
 
-  // Busca automática do CEP
   const handleCEPChange = async (cep: string) => {
     const cleanCEP = cep.replace(/\D/g, "");
-    setFormData((prev) => ({ ...prev, cep }));
     if (cleanCEP.length === 8) {
       setLoading(true);
       try {
-        const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
-        const data: ViaCEPResponse = await response.json();
+        const res = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+        const data: ViaCEPResponse = await res.json();
         if (!data.erro) {
           setFormData((prev) => ({
             ...prev,
             endereco: data.logradouro,
             bairro: data.bairro,
             cidade: data.localidade,
-            estado: data.uf,
+            estado: data.uf as LeadFormData["estado"],
           }));
         } else {
           toast.error("CEP não encontrado");
@@ -84,82 +83,52 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.razaosocial || !formData.estado) {
-      toast.error("Preencha os campos obrigatórios");
-      return;
-    }
+    onAddLead?.(formData);
 
-    const estadoSelecionado = ESTADOS_BRASILEIROS.find((e) => e.sigla === formData.estado);
+    toast.success("Lead cadastrado com sucesso!");
 
-    const newLead: Omit<Lead, "id" | "dataultimaatualizacao"> & {
-      cep: string;
-      numero: string;
-      bairro: string;
-      temperatura: "Quente" | "Frio" | null;
-    } = {
-      ...formData,
-      regiao: estadoSelecionado?.regiao || "Sudeste",
-      dataVisita: formData.dataVisita || null,
-      temperatura: formData.temperatura, // null se nenhuma
-    };
-
-    try {
-      const { error } = await supabase.from("leads").insert([newLead]);
-      if (error) {
-        toast.error("Erro ao cadastrar lead no banco: " + error.message);
-        return;
-      }
-    } catch (err) {
-      toast.error("Erro ao cadastrar lead no banco");
-      console.error(err);
-      return;
-    }
-
-    // Reset form
     setFormData({
       nome: "",
       razaosocial: "",
       email: "",
       telefone: "",
-      cep: "",
       endereco: "",
       numero: "",
       bairro: "",
       cidade: "",
-      estado: "",
+      estado: "SP",
       regiao: "Sudeste",
       status: "Ativo",
       temperatura: null,
       emProjecao: false,
       detalhesStatus: "",
-      dataVisita: "",
+      visitafeita: false,
     });
 
     setOpen(false);
-    toast.success("Lead cadastrado com sucesso!");
   };
 
   return (
     <>
       <Button
         onClick={() => setOpen(true)}
-        className="bg-white text-[#660629] border border-[#660629] shadow-card hover:bg-[#fce4ec] hover:scale-105 transition-all duration-300 flex items-center gap-2"
+        className="flex items-center gap-2 bg-white text-[#660629] border border-[#660629] shadow-card hover:bg-[#fce4ec]"
       >
-        <Plus className="h-4 w-4 mr-2" />
-        Novo Lead
+        <Plus className="h-4 w-4" /> Novo Lead
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Cadastrar Novo Lead
+              <UserPlus className="h-5 w-5" /> Cadastrar Novo Lead
             </DialogTitle>
-            <DialogDescription>Adicione um novo lead ao seu pipeline de vendas</DialogDescription>
+            <DialogDescription>
+              Adicione um novo lead ao pipeline
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -167,61 +136,86 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Nome</Label>
-                <Input value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} />
+                <Input
+                  value={formData.nome}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nome: e.target.value })
+                  }
+                />
               </div>
               <div>
-                <Label>Razão Social *</Label>
+                <Label>Razão Social</Label>
                 <Input
                   value={formData.razaosocial}
-                  onChange={(e) => setFormData({ ...formData, razaosocial: e.target.value })}
-                  required
+                  onChange={(e) =>
+                    setFormData({ ...formData, razaosocial: e.target.value })
+                  }
                 />
               </div>
             </div>
 
-            {/* Email e Telefone */}
+            {/* E-mail e Telefone */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>E-mail</Label>
                 <Input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                 />
               </div>
               <div>
                 <Label>Telefone</Label>
-                <Input value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} />
+                <Input
+                  value={formData.telefone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, telefone: e.target.value })
+                  }
+                />
               </div>
             </div>
 
-            {/* CEP */}
-            <div>
-              <Label>CEP</Label>
-              <div className="relative">
+            {/* Endereço */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
+              <div>
+                <Label>CEP</Label>
                 <Input
-                  value={formData.cep}
                   onChange={(e) => handleCEPChange(e.target.value)}
                   placeholder="00000-000"
                   maxLength={9}
                 />
-                {loading && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                {loading && (
+                  <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />
+                )}
               </div>
-            </div>
-
-            {/* Endereço, Número e Bairro */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>Endereço</Label>
-                <Input value={formData.endereco} onChange={(e) => setFormData({ ...formData, endereco: e.target.value })} />
+                <Input
+                  value={formData.endereco}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endereco: e.target.value })
+                  }
+                />
               </div>
               <div>
                 <Label>Número</Label>
-                <Input value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} />
+                <Input
+                  value={formData.numero}
+                  onChange={(e) =>
+                    setFormData({ ...formData, numero: e.target.value })
+                  }
+                />
               </div>
               <div>
                 <Label>Bairro</Label>
-                <Input value={formData.bairro} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} />
+                <Input
+                  value={formData.bairro}
+                  onChange={(e) =>
+                    setFormData({ ...formData, bairro: e.target.value })
+                  }
+                />
               </div>
             </div>
 
@@ -229,11 +223,24 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Cidade</Label>
-                <Input value={formData.cidade} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} />
+                <Input
+                  value={formData.cidade}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cidade: e.target.value })
+                  }
+                />
               </div>
               <div>
-                <Label>Estado *</Label>
-                <Select value={formData.estado} onValueChange={(v) => setFormData({ ...formData, estado: v })}>
+                <Label>Estado</Label>
+                <Select
+                  value={formData.estado}
+                  onValueChange={(v) =>
+                    setFormData({
+                      ...formData,
+                      estado: v as LeadFormData["estado"],
+                    })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
@@ -248,21 +255,38 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
               </div>
             </div>
 
-            {/* Data da Última Visita */}
+            {/* Visita realizada */}
             <div>
-              <Label>Data da Última Visita</Label>
-              <Input
-                type="date"
-                value={formData.dataVisita || ""}
-                onChange={(e) => setFormData({ ...formData, dataVisita: e.target.value })}
-              />
+              <Label>Visita Realizada</Label>
+              <Select
+                value={formData.visitafeita ? "Sim" : "Não"}
+                onValueChange={(v) =>
+                  setFormData({ ...formData, visitafeita: v === "Sim" })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Sim">Sim</SelectItem>
+                  <SelectItem value="Não">Não</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Status e Temperatura */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Status</Label>
-                <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v as "Ativo" | "Inativo" })}>
+                <Select
+                  value={formData.status}
+                  onValueChange={(v) =>
+                    setFormData({
+                      ...formData,
+                      status: v as LeadFormData["status"],
+                    })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -275,16 +299,18 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
               <div>
                 <Label>Temperatura</Label>
                 <Select
-                  value={formData.temperatura ?? "Nenhuma"}
+                  value={formData.temperatura ?? ""}
                   onValueChange={(v) =>
-                    setFormData({ ...formData, temperatura: v === "Nenhuma" ? null : (v as "Quente" | "Frio") })
+                    setFormData({
+                      ...formData,
+                      temperatura: v as LeadFormData["temperatura"],
+                    })
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Nenhuma">Nenhuma</SelectItem>
                     <SelectItem value="Quente">Quente</SelectItem>
                     <SelectItem value="Frio">Frio</SelectItem>
                   </SelectContent>
@@ -295,31 +321,34 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
             {/* Detalhes do Status */}
             <div>
               <Label>Detalhes do Status</Label>
-              <textarea
+              <Input
                 value={formData.detalhesStatus}
-                onChange={(e) => setFormData({ ...formData, detalhesStatus: e.target.value })}
-                className="w-full border rounded px-2 py-1"
-                placeholder="Descreva mais detalhes sobre o status"
+                onChange={(e) =>
+                  setFormData({ ...formData, detalhesStatus: e.target.value })
+                }
               />
             </div>
 
-            {/* Em Projeção */}
-            <div className="flex items-center space-x-2">
+            {/* Em Projeção ✅ */}
+            <div className="flex items-center gap-2">
               <Checkbox
                 checked={formData.emProjecao}
-                onCheckedChange={(c) => setFormData({ ...formData, emProjecao: c as boolean })}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, emProjecao: checked === true })
+                }
               />
-              <Label>Em Projeção</Label>
+              <Label>Lead em Projeção</Label>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button type="submit" className="bg-blue-600 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Cadastrar Lead
-              </Button>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+              >
                 Cancelar
               </Button>
+              <Button type="submit">Cadastrar</Button>
             </div>
           </form>
         </DialogContent>
