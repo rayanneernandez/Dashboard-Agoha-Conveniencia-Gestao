@@ -19,26 +19,44 @@ const REGION_COLORS: Record<string, string> = {
   Sul: "#8b5cf6",
 };
 
+const TEMPERATURE_COLORS = {
+  "Quente": "#EB1E61",
+  "Morno": "#FF6900",
+  "Frio": "#008E49",
+  "Sem temperatura": "#A3023D"
+};
+
 const ChartsSection = ({ leads, dashboardRef }: ChartsSectionProps) => {
-  // Dados agregados por estado
+  // Dados agregados por estado e temperatura
   const estadosData = leads.reduce(
     (acc, lead) => {
       const estadoExistente = acc.find((item) => item.estado === lead.estado);
       if (estadoExistente) {
         estadoExistente.total += 1;
-        if (lead.status === "Ativo") estadoExistente.ativos += 1;
-        else estadoExistente.inativos += 1;
+        if (lead.temperatura === "Quente") estadoExistente.quentes += 1;
+        else if (lead.temperatura === "Morno") estadoExistente.mornos += 1;
+        else if (lead.temperatura === "Frio") estadoExistente.frios += 1;
+        else estadoExistente.semTemperatura += 1;
       } else {
         acc.push({
           estado: lead.estado,
           total: 1,
-          ativos: lead.status === "Ativo" ? 1 : 0,
-          inativos: lead.status === "Inativo" ? 1 : 0,
+          quentes: lead.temperatura === "Quente" ? 1 : 0,
+          mornos: lead.temperatura === "Morno" ? 1 : 0,
+          frios: lead.temperatura === "Frio" ? 1 : 0,
+          semTemperatura: lead.temperatura === null ? 1 : 0,
         });
       }
       return acc;
     },
-    [] as Array<{ estado: string; total: number; ativos: number; inativos: number }>
+    [] as Array<{ 
+      estado: string; 
+      total: number; 
+      quentes: number; 
+      mornos: number; 
+      frios: number; 
+      semTemperatura: number;
+    }>
   ).sort((a, b) => b.total - a.total)
    .slice(0, 8);
 
@@ -64,7 +82,7 @@ const ChartsSection = ({ leads, dashboardRef }: ChartsSectionProps) => {
             <CardTitle>Leads por Estado</CardTitle>
           </div>
           <CardDescription className="text-white/90">
-            Distribuição de leads ativos e inativos por estado
+            Distribuição de leads por temperatura em cada estado
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6">
@@ -75,16 +93,10 @@ const ChartsSection = ({ leads, dashboardRef }: ChartsSectionProps) => {
               <YAxis stroke="#333" fontSize={12} />
               <Tooltip />
               <Legend verticalAlign="top" height={36} />
-              <Bar dataKey="ativos" stackId="a" name="Ativos">
-                {estadosData.map((entry, index) => (
-                  <Cell key={entry.estado} fill={ACTIVE_COLORS[index % ACTIVE_COLORS.length]} />
-                ))}
-              </Bar>
-              <Bar dataKey="inativos" stackId="a" name="Inativos">
-                {estadosData.map((entry, index) => (
-                  <Cell key={entry.estado} fill={INACTIVE_COLORS[index % INACTIVE_COLORS.length]} />
-                ))}
-              </Bar>
+              <Bar dataKey="quentes" stackId="a" name="Quentes" fill={TEMPERATURE_COLORS["Quente"]} />
+              <Bar dataKey="mornos" stackId="a" name="Mornos" fill={TEMPERATURE_COLORS["Morno"]} />
+              <Bar dataKey="frios" stackId="a" name="Frios" fill={TEMPERATURE_COLORS["Frio"]} />
+              <Bar dataKey="semTemperatura" stackId="a" name="Sem temperatura" fill={TEMPERATURE_COLORS["Sem temperatura"]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

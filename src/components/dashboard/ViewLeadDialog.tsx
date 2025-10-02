@@ -33,6 +33,10 @@ const ViewLeadDialog: React.FC<ViewLeadDialogProps> = ({ lead }) => {
             Veja todas as informações deste lead.
           </DialogDescription>
         </DialogHeader>
+      
+        
+        // Dentro do componente ViewLeadDialog, na parte onde mostra os detalhes do lead:
+        
         <div className="space-y-2">
           <p><strong>Nome:</strong> {lead.nome}</p>
           <p><strong>Razão Social:</strong> {lead.razaosocial}</p>
@@ -43,7 +47,9 @@ const ViewLeadDialog: React.FC<ViewLeadDialogProps> = ({ lead }) => {
           <p><strong>Cidade:</strong> {lead.cidade}</p>
           <p><strong>Estado:</strong> {lead.estado}</p>
           <p><strong>Status:</strong> {lead.status}</p>
-          <p><strong>Temperatura:</strong> {lead.temperatura}</p>
+          {lead.status === "Lead" && (
+            <p><strong>Temperatura:</strong> {lead.temperatura}</p>
+          )}
           <p><strong>Detalhes Status:</strong> {lead.detalhesStatus}</p>
         </div>
       </DialogContent>

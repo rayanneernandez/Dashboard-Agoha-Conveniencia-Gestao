@@ -15,14 +15,14 @@ const CustomBrazilMap = ({ leads }: CustomBrazilMapProps) => {
   // Calcular estatísticas por estado
   const estadosStats = leads.reduce((acc, lead) => {
     if (!acc[lead.estado]) {
-      acc[lead.estado] = { total: 0, ativos: 0 };
+      acc[lead.estado] = { total: 0, clientes: 0 };
     }
     acc[lead.estado].total += 1;
-    if (lead.status === 'Ativo') {
-      acc[lead.estado].ativos += 1;
+    if (lead.status === 'Cliente') {
+      acc[lead.estado].clientes += 1;
     }
     return acc;
-  }, {} as Record<string, { total: number; ativos: number }>);
+  }, {} as Record<string, { total: number; clientes: number }>);
 
   // Ordenar estados por quantidade total de leads
   const estadosOrdenados = Object.entries(estadosStats)
@@ -66,10 +66,10 @@ const CustomBrazilMap = ({ leads }: CustomBrazilMapProps) => {
                       Total: {stats.total}
                     </Badge>
                     <Badge 
-                      variant={stats.ativos > 0 ? "default" : "secondary"}
+                      variant={stats.clientes > 0 ? "default" : "secondary"}
                       className="w-full justify-center"
                     >
-                      Ativos: {stats.ativos}
+                      Clientes: {stats.clientes}
                     </Badge>
                   </div>
                 </div>

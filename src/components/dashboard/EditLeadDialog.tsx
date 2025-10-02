@@ -198,40 +198,48 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 </SelectContent>
               </Select>
             </div>
+            
+            
             <div>
               <Label>Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(v) =>
-                  handleInputChange("status", v as "Ativo" | "Inativo")
+                  handleInputChange("status", v as "Ativo" | "Inativo" | "Cliente" | "Cancelado" | "Lead")
                 }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Cliente">Cliente</SelectItem>
+                  <SelectItem value="Cancelado">Cancelado</SelectItem>
+                  <SelectItem value="Lead">Lead</SelectItem>
                   <SelectItem value="Ativo">Ativo</SelectItem>
                   <SelectItem value="Inativo">Inativo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Temperatura</Label>
-              <Select
-                value={formData.temperatura}
-                onValueChange={(v) =>
-                  handleInputChange("temperatura", v as "Quente" | "Frio")
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Quente">Quente</SelectItem>
-                  <SelectItem value="Frio">Frio</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {(formData.status === "Lead" || formData.status === "Inativo") && (
+              <div>
+                <Label>Temperatura</Label>
+                <Select
+                  value={formData.temperatura ?? ""}
+                  onValueChange={(v) =>
+                    handleInputChange("temperatura", v as "Quente" | "Morno" | "Frio")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Quente">Quente</SelectItem>
+                    <SelectItem value="Morno">Morno</SelectItem>
+                    <SelectItem value="Frio">Frio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>Visita Feita</Label>
               <Select

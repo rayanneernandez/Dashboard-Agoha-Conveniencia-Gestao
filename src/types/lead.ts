@@ -10,8 +10,8 @@ export interface Lead {
   cidade: string;
   estado: string;
   regiao: 'Norte' | 'Nordeste' | 'Centro-Oeste' | 'Sudeste' | 'Sul';
-  status: 'Ativo' | 'Inativo';
-  temperatura: 'Quente' | 'Frio' | null;
+  status: 'Ativo' | 'Inativo' | 'Cliente' | 'Cancelado' | 'Lead';
+  temperatura: 'Quente' | 'Morno' | 'Frio' | null;
   emProjecao: boolean;
   detalhesStatus: string;
   visitafeita: 'Sim' | 'Não'; // enum obrigatório para o banco

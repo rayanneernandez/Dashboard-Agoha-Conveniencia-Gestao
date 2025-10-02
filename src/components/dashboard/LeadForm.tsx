@@ -50,7 +50,7 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
     cidade: "",
     estado: "SP",
     regiao: "Sudeste",
-    status: "Ativo",
+    status: "Lead", // Alterado para o novo valor padrão
     temperatura: null,
     emProjecao: false, // ✅ inicializado
     detalhesStatus: "",
@@ -234,12 +234,26 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
                 <Label>Estado</Label>
                 <Select
                   value={formData.estado}
-                  onValueChange={(v) =>
+                  onValueChange={(v) => {
+                    // Obter a região correspondente ao estado selecionado
+                    const estado = v as LeadFormData["estado"];
+                    const regioes: Record<string, string> = {
+                      "AC": "Norte", "AM": "Norte", "AP": "Norte", "PA": "Norte", "RO": "Norte", "RR": "Norte", "TO": "Norte",
+                      "AL": "Nordeste", "BA": "Nordeste", "CE": "Nordeste", "MA": "Nordeste", "PB": "Nordeste", 
+                      "PE": "Nordeste", "PI": "Nordeste", "RN": "Nordeste", "SE": "Nordeste",
+                      "DF": "Centro-Oeste", "GO": "Centro-Oeste", "MS": "Centro-Oeste", "MT": "Centro-Oeste",
+                      "ES": "Sudeste", "MG": "Sudeste", "RJ": "Sudeste", "SP": "Sudeste",
+                      "PR": "Sul", "RS": "Sul", "SC": "Sul"
+                    };
+                    
+                    const regiao = regioes[estado] || "Sudeste";
+                    
                     setFormData({
                       ...formData,
-                      estado: v as LeadFormData["estado"],
-                    })
-                  }
+                      estado: estado,
+                      regiao: regiao as LeadFormData["regiao"]
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
@@ -276,6 +290,8 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
 
             {/* Status e Temperatura */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              
               <div>
                 <Label>Status</Label>
                 <Select
@@ -284,6 +300,8 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
                     setFormData({
                       ...formData,
                       status: v as LeadFormData["status"],
+                      // Se mudar para Cliente ou Cancelado, limpa a temperatura
+                      temperatura: v === "Cliente" ? null : formData.temperatura
                     })
                   }
                 >
@@ -291,31 +309,35 @@ const LeadForm = ({ onAddLead }: LeadFormProps) => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Ativo">Ativo</SelectItem>
-                    <SelectItem value="Inativo">Inativo</SelectItem>
+                    <SelectItem value="Cliente">Cliente</SelectItem>
+                    <SelectItem value="Cancelado">Cancelado</SelectItem>
+                    <SelectItem value="Lead">Lead</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Temperatura</Label>
-                <Select
-                  value={formData.temperatura ?? ""}
-                  onValueChange={(v) =>
-                    setFormData({
-                      ...formData,
-                      temperatura: v as LeadFormData["temperatura"],
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Quente">Quente</SelectItem>
-                    <SelectItem value="Frio">Frio</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {formData.status === "Lead" && (
+                <div>
+                  <Label>Temperatura</Label>
+                  <Select
+                    value={formData.temperatura ?? ""}
+                    onValueChange={(v) =>
+                      setFormData({
+                        ...formData,
+                        temperatura: v as LeadFormData["temperatura"],
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Quente">Quente</SelectItem>
+                      <SelectItem value="Morno">Morno</SelectItem>
+                      <SelectItem value="Frio">Frio</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* Detalhes do Status */}

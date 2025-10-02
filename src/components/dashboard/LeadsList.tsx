@@ -39,6 +39,7 @@ interface LeadsListProps {
   ) => void;
   onDeleteLead: (id: string) => void; // Exclusão individual
   onDeleteMultipleLeads: (ids: string[]) => void; // Exclusão múltipla
+  filter?: 'all' | 'ativos' | 'inativos' | 'leads' | 'clientes' | 'quentes';
 }
 
 const LeadsList: React.FC<LeadsListProps> = ({
@@ -46,6 +47,7 @@ const LeadsList: React.FC<LeadsListProps> = ({
   onEditLead,
   onDeleteLead,
   onDeleteMultipleLeads,
+  filter,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
@@ -62,12 +64,28 @@ const LeadsList: React.FC<LeadsListProps> = ({
           lead.razaosocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (lead.cidade?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
 
-        const matchesStatus =
-          filterStatus === "todos" ||
-          (filterStatus === "ativos" && lead.status === "Ativo") ||
-          (filterStatus === "inativos" && lead.status === "Inativo") ||
-          (filterStatus === "quentes" && lead.temperatura === "Quente") ||
-          (filterStatus === "frios" && lead.temperatura === "Frio");
+        let matchesStatus = true;
+        if (filter === 'leads') {
+          // Filtro para a página de leads
+          if (filterStatus !== "todos") {
+            matchesStatus = lead.temperatura === filterStatus;
+          }
+        } else if (filter === 'clientes') {
+          // Filtro para a página de clientes
+          if (filterStatus !== "todos") {
+            matchesStatus = lead.status === filterStatus;
+          }
+        } else {
+          // Filtros padrão para outras páginas
+          matchesStatus =
+            filterStatus === "todos" ||
+            (filterStatus === "Cliente" && lead.status === "Cliente") ||
+            (filterStatus === "Cancelado" && lead.status === "Cancelado") ||
+            (filterStatus === "Lead" && lead.status === "Lead") ||
+            (filterStatus === "Quente" && lead.temperatura === "Quente") ||
+            (filterStatus === "Morno" && lead.temperatura === "Morno") ||
+            (filterStatus === "Frio" && lead.temperatura === "Frio");
+        }
 
         const matchesEstado =
           filterEstado === "todos" || lead.estado === filterEstado;
@@ -75,7 +93,7 @@ const LeadsList: React.FC<LeadsListProps> = ({
         return matchesSearch && matchesStatus && matchesEstado;
       })
     );
-  }, [leads, searchTerm, filterStatus, filterEstado]);
+  }, [leads, searchTerm, filterStatus, filterEstado, filter]);
 
   // Selecionar/desmarcar todos
   const toggleSelectAll = () => {
@@ -100,6 +118,61 @@ const LeadsList: React.FC<LeadsListProps> = ({
     setSelectAll(false);
   };
 
+  // Renderizar filtros específicos baseados no tipo de página
+  const renderFilters = () => {
+    if (filter === 'leads') {
+      return (
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger>
+            <SelectValue placeholder="Filtrar por temperatura" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todas temperaturas</SelectItem>
+            <SelectItem value="Quente">Quente</SelectItem>
+            <SelectItem value="Morno">Morno</SelectItem>
+            <SelectItem value="Frio">Frio</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+    } else if (filter === 'clientes') {
+      return (
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger>
+            <SelectValue placeholder="Filtrar por status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos status</SelectItem>
+            <SelectItem value="Cliente">Cliente</SelectItem>
+            <SelectItem value="Cancelado">Cancelado</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+    } else {
+      return (
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger>
+            <SelectValue placeholder="Filtrar por status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="Cliente">Cliente</SelectItem>
+            <SelectItem value="Cancelado">Cancelado</SelectItem>
+            <SelectItem value="Lead">Lead</SelectItem>
+            <SelectItem value="Quente">Quente</SelectItem>
+            <SelectItem value="Morno">Morno</SelectItem>
+            <SelectItem value="Frio">Frio</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+    }
+  };
+
+  // Determinar se deve mostrar a coluna de temperatura
+  const showTemperatureColumn = filter !== 'clientes';
+
+  // Determinar se deve mostrar todas as ações ou apenas visualização
+  const showAllActions = filter !== 'clientes';
+
   return (
     <div className="mt-6">
       {/* Barra de busca e filtros */}
@@ -109,18 +182,7 @@ const LeadsList: React.FC<LeadsListProps> = ({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger>
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
-            <SelectItem value="ativos">Ativos</SelectItem>
-            <SelectItem value="inativos">Inativos</SelectItem>
-            <SelectItem value="quentes">Quentes</SelectItem>
-            <SelectItem value="frios">Frios</SelectItem>
-          </SelectContent>
-        </Select>
+        {renderFilters()}
         <Select value={filterEstado} onValueChange={setFilterEstado}>
           <SelectTrigger>
             <SelectValue placeholder="Filtrar por estado" />
@@ -158,7 +220,7 @@ const LeadsList: React.FC<LeadsListProps> = ({
             <TableHead>Cidade</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Temperatura</TableHead>
+            {showTemperatureColumn && <TableHead>Temperatura</TableHead>}
             <TableHead>Detalhes Status</TableHead>
             <TableHead>Ações</TableHead>
           </TableRow>
@@ -181,49 +243,54 @@ const LeadsList: React.FC<LeadsListProps> = ({
               <TableCell>{lead.estado}</TableCell>
               <TableCell>
                 <Badge
-                  variant={lead.status === "Ativo" ? "default" : "outline"}
+                  variant={lead.status === "Cliente" ? "default" : "outline"}
                 >
                   {lead.status}
                 </Badge>
               </TableCell>
-              <TableCell>
-                <Badge
-                  variant={lead.temperatura === "Quente" ? "default" : "outline"}
-                >
-                  {lead.temperatura ?? "Nenhuma"}
-                </Badge>
-              </TableCell>
+              {showTemperatureColumn && (
+                <TableCell>
+                  <Badge
+                    variant={lead.temperatura === "Quente" ? "default" : "outline"}
+                  >
+                    {lead.temperatura || ""}
+                  </Badge>
+                </TableCell>
+              )}
               <TableCell>{lead.detalhesStatus}</TableCell>
               <TableCell className="flex gap-2">
-                {/* Novo botão de visualizar */}
+                {/* Botão de visualizar (sempre presente) */}
                 <ViewLeadDialog lead={lead} />
 
-                {/* Editar */}
-                <EditLeadDialog lead={lead} onEditLead={onEditLead} />
+                {/* Editar e Excluir (apenas em algumas páginas) */}
+                {showAllActions && (
+                  <>
+                    <EditLeadDialog lead={lead} onEditLead={onEditLead} />
 
-                {/* Excluir */}
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Tem certeza que deseja excluir?
-                      </AlertDialogTitle>
-                    </AlertDialogHeader>
-                    <div className="flex justify-end gap-2 mt-4">
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => onDeleteLead(lead.id)}
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </div>
-                  </AlertDialogContent>
-                </AlertDialog>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Tem certeza que deseja excluir?
+                          </AlertDialogTitle>
+                        </AlertDialogHeader>
+                        <div className="flex justify-end gap-2 mt-4">
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDeleteLead(lead.id)}
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </div>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                )}
               </TableCell>
             </TableRow>
           ))}

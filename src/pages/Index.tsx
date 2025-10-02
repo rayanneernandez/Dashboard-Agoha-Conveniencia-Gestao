@@ -8,6 +8,7 @@ import CustomBrazilMap from "@/components/dashboard/CustomBrazilMap";
 import ChartsSection from "@/components/dashboard/ChartsSection";
 import ExportButtons from "@/components/dashboard/ExportButtons";
 import ImportLeads from "@/components/dashboard/ImportLeads";
+import SideMenu from "@/components/dashboard/SideMenu";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 
@@ -40,9 +41,20 @@ const Index = () => {
   }, []);
 
   const stats: DashboardStats = useMemo(() => {
-    const totalLeads = leads.length;
-    const leadsAtivos = leads.filter((l) => l.status === "Ativo").length;
-    const leadsInativos = leads.filter((l) => l.status === "Inativo").length;
+    // Total de leads (apenas quentes, frios e mornos)
+    const totalLeads = leads.filter(l => 
+      l.temperatura === "Quente" || 
+      l.temperatura === "Frio" || 
+      l.temperatura === "Morno"
+    ).length;
+    
+    // Clientes (status = Cliente)
+    const leadsClientes = leads.filter((l) => l.status === "Cliente").length;
+    
+    // Inativos (agora são os mornos)
+    const leadsInativos = leads.filter((l) => l.temperatura === "Morno").length;
+    
+    // Mantendo o restante igual
     const leadsQuentes = leads.filter((l) => l.temperatura === "Quente").length;
     const leadsFrios = leads.filter((l) => l.temperatura === "Frio").length;
     const leadsEmProjecao = leads.filter((l) => l.emProjecao ?? false).length;
@@ -57,7 +69,7 @@ const Index = () => {
 
     return {
       totalLeads,
-      leadsAtivos,
+      leadsAtivos: leadsClientes, // Renomeando internamente para manter compatibilidade
       leadsInativos,
       leadsQuentes,
       leadsFrios,
@@ -115,7 +127,6 @@ const Index = () => {
     setLeads((prev) => prev.filter((l) => l.id !== id));
   };
 
-  // Nova função: exclusão múltipla
   const handleDeleteMultipleLeads = async (ids: string[]) => {
     try {
       const { error } = await supabase.from("leads").delete().in("id", ids);
@@ -130,8 +141,21 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
+      <SideMenu 
+        leads={leads} 
+        dashboardRef={dashboardRef}
+        onImportLeads={(importedLeads) =>
+          setLeads((prev) => [
+            ...prev,
+            ...importedLeads
+              .filter((l) => l.status === "Ativo")
+              .map((l) => ({ ...l, visitafeita: normalizeVisitafeita(l.visitafeita) })),
+          ])
+        }
+      />
+      
       <div className="bg-gradient-header text-white py-3 px-6">
-        <div className="max-w-7xl mx-auto flex justify-between items-center gap-4">
+        <div className="max-w-7xl mx-auto flex justify-between items-center gap-4 ml-16 md:ml-20">
           <div className="flex items-center gap-3">
             <img
               src="/logo.png"
@@ -144,17 +168,6 @@ const Index = () => {
             </div>
           </div>
           <div className="flex gap-2 items-center">
-            <ExportButtons leads={leads} stats={stats} dashboardRef={dashboardRef} />
-            <ImportLeads
-              onImportLeads={(importedLeads) =>
-                setLeads((prev) => [
-                  ...prev,
-                  ...importedLeads
-                    .filter((l) => l.status === "Ativo")
-                    .map((l) => ({ ...l, visitafeita: normalizeVisitafeita(l.visitafeita) })),
-                ])
-              }
-            />
             <LeadForm onAddLead={handleAddLead} />
           </div>
         </div>
@@ -163,9 +176,9 @@ const Index = () => {
       <div className="max-w-7xl mx-auto p-6 space-y-8">
         <div ref={dashboardRef}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
-            <MetricCard title="Total de Leads" value={stats.totalLeads} description="Total geral" icon={UserCheck} variant="total" />
-            <MetricCard title="Leads Ativos" value={stats.leadsAtivos} description="Em operação" icon={UserCheck} variant="success" />
-            <MetricCard title="Leads Inativos" value={stats.leadsInativos} description="Fora de operação" icon={UserX} variant="danger" />
+            <MetricCard title="Total de Leads" value={stats.totalLeads} description="Quentes, Frios e Mornos" icon={UserCheck} variant="total" />
+            <MetricCard title="Clientes" value={stats.leadsAtivos} description="Cadastrados" icon={UserCheck} variant="success" />
+            <MetricCard title="Leads Mornos" value={stats.leadsInativos} description="Temperatura média" icon={UserX} variant="danger" />
             <MetricCard title="Leads Quentes" value={stats.leadsQuentes} description="Potencial fechamento" icon={Flame} variant="warning" />
             <MetricCard title="Leads Frios" value={stats.leadsFrios} description="Baixo potencial" icon={Snowflake} variant="info" />
             <MetricCard title="Em Projeção" value={stats.leadsEmProjecao} description="Fundamentalmente certo" icon={Target} variant="purple" />
