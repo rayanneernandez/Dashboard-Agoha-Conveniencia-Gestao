@@ -22,8 +22,7 @@ const REGION_COLORS: Record<string, string> = {
 const TEMPERATURE_COLORS = {
   "Quente": "#EB1E61",
   "Morno": "#FF6900",
-  "Frio": "#008E49",
-  "Sem temperatura": "#A3023D"
+  "Frio": "#008E49"
 };
 
 const ChartsSection = ({ leads, dashboardRef }: ChartsSectionProps) => {
@@ -36,7 +35,6 @@ const ChartsSection = ({ leads, dashboardRef }: ChartsSectionProps) => {
         if (lead.temperatura === "Quente") estadoExistente.quentes += 1;
         else if (lead.temperatura === "Morno") estadoExistente.mornos += 1;
         else if (lead.temperatura === "Frio") estadoExistente.frios += 1;
-        else estadoExistente.semTemperatura += 1;
       } else {
         acc.push({
           estado: lead.estado,
@@ -44,7 +42,6 @@ const ChartsSection = ({ leads, dashboardRef }: ChartsSectionProps) => {
           quentes: lead.temperatura === "Quente" ? 1 : 0,
           mornos: lead.temperatura === "Morno" ? 1 : 0,
           frios: lead.temperatura === "Frio" ? 1 : 0,
-          semTemperatura: lead.temperatura === null ? 1 : 0,
         });
       }
       return acc;
@@ -54,8 +51,7 @@ const ChartsSection = ({ leads, dashboardRef }: ChartsSectionProps) => {
       total: number; 
       quentes: number; 
       mornos: number; 
-      frios: number; 
-      semTemperatura: number;
+      frios: number;
     }>
   ).sort((a, b) => b.total - a.total)
    .slice(0, 8);
@@ -96,7 +92,6 @@ const ChartsSection = ({ leads, dashboardRef }: ChartsSectionProps) => {
               <Bar dataKey="quentes" stackId="a" name="Quentes" fill={TEMPERATURE_COLORS["Quente"]} />
               <Bar dataKey="mornos" stackId="a" name="Mornos" fill={TEMPERATURE_COLORS["Morno"]} />
               <Bar dataKey="frios" stackId="a" name="Frios" fill={TEMPERATURE_COLORS["Frio"]} />
-              <Bar dataKey="semTemperatura" stackId="a" name="Sem temperatura" fill={TEMPERATURE_COLORS["Sem temperatura"]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

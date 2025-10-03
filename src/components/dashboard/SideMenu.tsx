@@ -7,9 +7,8 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import autoTable from "jspdf-autotable";
-import { Lead, DashboardStats } from "@/types/lead";
+import { Lead } from "@/types/lead";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabaseClient";
 
 interface SideMenuProps {
   leads: any[];
@@ -27,41 +26,11 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
   };
 
   const menuItems = [
-    { 
-      title: "Dashboard", 
-      icon: <Menu className="h-5 w-5" />, 
-      path: "/", 
-      filter: "all",
-      count: null
-    },
-    { 
-      title: "Todos os Leads", 
-      icon: <Users className="h-5 w-5" />, 
-      path: "/leads", 
-      filter: "leads",
-      count: leads.filter(lead => lead.status === "Lead").length
-    },
-    { 
-      title: "Clientes", 
-      icon: <UserCheck className="h-5 w-5" />, 
-      path: "/clientes", 
-      filter: "clientes",
-      count: leads.filter(lead => lead.status === "Cliente" || lead.status === "Cancelado").length
-    },
-    { 
-      title: "Quentes", 
-      icon: <UserX className="h-5 w-5" />, 
-      path: "/quentes", 
-      filter: "quentes",
-      count: leads.filter(lead => lead.temperatura === "Quente").length
-    },
-    { 
-      title: "Mapa", 
-      icon: <Map className="h-5 w-5" />, 
-      path: "/mapa", 
-      filter: "mapa",
-      count: null
-    }
+    { title: "Dashboard", icon: <Menu className="h-5 w-5" />, path: "/", filter: "all", count: null },
+    { title: "Todos os Leads", icon: <Users className="h-5 w-5" />, path: "/leads", filter: "leads", count: leads.filter(lead => lead.status === "Lead").length },
+    { title: "Clientes", icon: <UserCheck className="h-5 w-5" />, path: "/clientes", filter: "clientes", count: leads.filter(lead => lead.status === "Cliente" || lead.status === "Cancelado").length },
+    { title: "Quentes", icon: <UserX className="h-5 w-5" />, path: "/quentes", filter: "quentes", count: leads.filter(lead => lead.temperatura === "Quente").length },
+    { title: "Mapa", icon: <Map className="h-5 w-5" />, path: "/mapa", filter: "mapa", count: null }
   ];
 
   // Exportar Leads para Excel
@@ -97,7 +66,7 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
     }
   };
 
-  // Exportar Leads  PDF (tabela)
+  // Exportar Leads para PDF
   const exportLeadsToPDF = () => {
     try {
       const doc = new jsPDF("l", "mm", "a4");
@@ -113,19 +82,7 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
         lead.temperatura || "-",
       ]);
 
-      const head = [
-        [
-          "Nome",
-          "Razão Social",
-          "Email",
-          "Telefone",
-          "Cidade",
-          "Estado",
-          "Visita Feita",
-          "Status",
-          "Temperatura",
-        ],
-      ];
+      const head = [[ "Nome", "Razão Social", "Email", "Telefone", "Cidade", "Estado", "Visita Feita", "Status", "Temperatura" ]];
 
       doc.setFontSize(18);
       doc.setTextColor(102, 6, 41);
@@ -136,15 +93,8 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
         body: tableData,
         startY: 30,
         theme: "grid",
-        styles: {
-          fontSize: 8,
-          cellPadding: 2,
-        },
-        headStyles: {
-          fillColor: [102, 6, 41],
-          textColor: [255, 255, 255],
-          fontStyle: "bold",
-        },
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [102, 6, 41], textColor: [255, 255, 255], fontStyle: "bold" },
       });
 
       doc.save("leads.pdf");
@@ -173,25 +123,20 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('l', 'mm', 'a4');
         
-        // Dimensões da página A4 paisagem
         const pdfWidth = 297;
         const pdfHeight = 210;
         
-        // Calcular dimensões para manter proporção
         const imgWidth = canvas.width;
         const imgHeight = canvas.height;
         const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight) * 0.9;
         
-        // Calcular posição para centralizar
         const xPos = (pdfWidth - imgWidth * ratio) / 2;
         const yPos = 20;
         
-        // Adicionar título
         pdf.setFontSize(18);
         pdf.setTextColor(102, 6, 41);
         pdf.text('Dashboard de Leads - AgHora Conveniência', pdfWidth / 2, 10, { align: 'center' });
         
-        // Adicionar imagem
         pdf.addImage(imgData, 'PNG', xPos, yPos, imgWidth * ratio, imgHeight * ratio);
         
         pdf.save('dashboard.pdf');
@@ -219,7 +164,7 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
 
         if (jsonData.length > 0) {
           const importedLeads = await processImportedData(jsonData);
-                onImportLeads(importedLeads as Lead[]);
+          onImportLeads(importedLeads as Lead[]);
           toast.success(`${importedLeads.length} leads importados com sucesso!`);
         } else {
           toast.error("Nenhum dado encontrado na planilha");
@@ -234,7 +179,6 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
   };
 
   const processImportedData = async (jsonData: any[]) => {
-    // Lógica simplificada de processamento de dados importados
     return jsonData.map((row) => {
       const estado = row["Estado"] || "SP";
       const regiao = obterRegiaoPorEstado(estado);
@@ -270,39 +214,39 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
       "ES": "Sudeste", "MG": "Sudeste", "RJ": "Sudeste", "SP": "Sudeste",
       "PR": "Sul", "RS": "Sul", "SC": "Sul"
     };
-    
     return regioes[estado] || "Sudeste";
   };
 
   return (
     <>
-      {/* Botão do menu hamburguer reposicionado */}
+      {/* Botão do menu hamburguer com cores adaptativas */}
       <Button 
         variant="ghost" 
         size="icon" 
-        className="fixed top-4 left-4 z-50 text-white hover:bg-transparent md:top-6 md:left-6 w-12 h-12 flex items-center justify-center"
+        className="fixed top-2 left-4 z-40 transition-colors duration-200 w-14 h-14 flex items-center justify-center shadow-md
+          bg-[#660629] text-white hover:bg-[#7a0731]
+          dark:bg-white dark:text-[#660629] dark:hover:bg-gray-100"
         onClick={toggleMenu}
-        style={{position: 'fixed'}}
       >
-        <Menu className="h-6 w-6" />
+        <Menu className="h-8 w-8" />
       </Button>
 
-      {/* Overlay para fechar o menu quando clicar fora */}
+      {/* Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/20 z-40"
+          className="fixed inset-0 bg-black/20 z-45"
           onClick={() => setIsOpen(false)}
         />
       )}
 
-     {/* Menu lateral */}
-    <div className={cn(
-        "fixed top-0 left-0 h-full w-64 bg-white shadow-xl z-40 transition-transform duration-300 transform flex flex-col",
-            isOpen ? "translate-x-0" : "-translate-x-full"
-            )}>
+      {/* Menu lateral */}
+      <div className={cn(
+        "fixed top-0 left-0 h-full w-64 bg-white shadow-xl z-50 transition-transform duration-300 transform flex flex-col",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
         <div className="p-4 border-b">
-            <h2 className="text-xl font-bold text-[#660629]">Dashboard de Leads</h2>
-            <p className="text-sm text-gray-500">AgHora Conveniência</p>
+          <h2 className="text-xl font-bold text-[#660629]">Dashboard de Leads</h2>
+          <p className="text-sm text-gray-500">AgHora Conveniência</p>
         </div>
 
         <nav className="p-4 flex-1 overflow-y-auto">
@@ -351,7 +295,6 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
               <h3 className="text-sm font-medium text-gray-500 mb-2">Ferramentas</h3>
             </li>
             
-            {/* Exportar para Excel */}
             <li>
               <button
                 className="flex items-center gap-3 w-full p-3 rounded-md transition-colors hover:bg-[#fce4ec] text-gray-700"
@@ -362,7 +305,6 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
               </button>
             </li>
             
-            {/* Exportar para PDF */}
             <li>
               <button
                 className="flex items-center gap-3 w-full p-3 rounded-md transition-colors hover:bg-[#fce4ec] text-gray-700"
@@ -373,7 +315,6 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
               </button>
             </li>
             
-            {/* Exportar Dashboard para PDF */}
             {dashboardRef && (
               <li>
                 <button
@@ -386,7 +327,6 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
               </li>
             )}
             
-            {/* Importar Leads */}
             {onImportLeads && (
               <li>
                 <label
