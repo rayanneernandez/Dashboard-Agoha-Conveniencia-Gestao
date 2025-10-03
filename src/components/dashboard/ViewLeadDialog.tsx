@@ -35,7 +35,7 @@ const ViewLeadDialog: React.FC<ViewLeadDialogProps> = ({ lead }) => {
         </DialogHeader>
       
         
-        // Dentro do componente ViewLeadDialog, na parte onde mostra os detalhes do lead:
+        
         
         <div className="space-y-2">
           <p><strong>Nome:</strong> {lead.nome}</p>
