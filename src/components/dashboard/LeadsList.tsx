@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Lead, ESTADOS_BRASILEIROS } from "@/types/lead";
-import EditLeadDialog from "@/components/dashboard/EditLeadDialog";
+import EditLeadDialog, { EditableLead } from "@/components/dashboard/EditLeadDialog";
 import ViewLeadDialog from "@/components/dashboard/ViewLeadDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,25 +21,25 @@ import {
 } from "@/components/ui/table";
 import {
   AlertDialog,
-  AlertDialogTrigger,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,  // Adicionando esta importação
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogCancel,
-  AlertDialogAction,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Trash2 } from "lucide-react";
 
 interface LeadsListProps {
   leads: Lead[];
-  onEditLead: (
-    id: string,
-    leadData: Omit<Lead, "id" | "dataultimaatualizacao">
-  ) => void;
-  onDeleteLead: (id: string) => void; // Exclusão individual
-  onDeleteMultipleLeads: (ids: string[]) => void; // Exclusão múltipla
+  onEditLead: (id: string, leadData: EditableLead) => void;
+  onDeleteLead: (id: string) => void;
+  onDeleteMultipleLeads: (ids: string[]) => void; 
   filter?: 'all' | 'ativos' | 'inativos' | 'leads' | 'clientes' | 'quentes';
+  onRefresh?: () => Promise<void>;
 }
 
 const LeadsList: React.FC<LeadsListProps> = ({
@@ -66,22 +66,23 @@ const LeadsList: React.FC<LeadsListProps> = ({
 
         let matchesStatus = true;
         if (filter === 'leads') {
-          // Filtro para a página de leads
           if (filterStatus !== "todos") {
             matchesStatus = lead.temperatura === filterStatus;
           }
         } else if (filter === 'clientes') {
-          // Filtro para a página de clientes
           if (filterStatus !== "todos") {
-            matchesStatus = lead.status === filterStatus;
+            matchesStatus = 
+              (filterStatus === "Cliente" && lead.status === "Cliente") ||
+              (filterStatus === "Cancelado" && lead.status === "Cancelado") ||
+              (filterStatus === "Em Projeção" && lead.emProjecao);
           }
         } else {
-          // Filtros padrão para outras páginas
           matchesStatus =
             filterStatus === "todos" ||
             (filterStatus === "Cliente" && lead.status === "Cliente") ||
             (filterStatus === "Cancelado" && lead.status === "Cancelado") ||
             (filterStatus === "Lead" && lead.status === "Lead") ||
+            (filterStatus === "Em Projeção" && lead.emProjecao) ||
             (filterStatus === "Quente" && lead.temperatura === "Quente") ||
             (filterStatus === "Morno" && lead.temperatura === "Morno") ||
             (filterStatus === "Frio" && lead.temperatura === "Frio");
@@ -95,14 +96,12 @@ const LeadsList: React.FC<LeadsListProps> = ({
     );
   }, [leads, searchTerm, filterStatus, filterEstado, filter]);
 
-  // Selecionar/desmarcar todos
   const toggleSelectAll = () => {
     if (selectAll) setSelectedLeads(new Set());
     else setSelectedLeads(new Set(filteredLeads.map((lead) => lead.id)));
     setSelectAll(!selectAll);
   };
 
-  // Selecionar/desmarcar um lead
   const toggleSelectLead = (id: string) => {
     const newSet = new Set(selectedLeads);
     if (newSet.has(id)) newSet.delete(id);
@@ -110,7 +109,6 @@ const LeadsList: React.FC<LeadsListProps> = ({
     setSelectedLeads(newSet);
   };
 
-  // Deletar múltiplos leads
   const handleDeleteMultiple = () => {
     if (selectedLeads.size === 0) return;
     onDeleteMultipleLeads(Array.from(selectedLeads));
@@ -118,7 +116,6 @@ const LeadsList: React.FC<LeadsListProps> = ({
     setSelectAll(false);
   };
 
-  // Renderizar filtros específicos baseados no tipo de página
   const renderFilters = () => {
     if (filter === 'leads') {
       return (
@@ -144,6 +141,7 @@ const LeadsList: React.FC<LeadsListProps> = ({
             <SelectItem value="todos">Todos status</SelectItem>
             <SelectItem value="Cliente">Cliente</SelectItem>
             <SelectItem value="Cancelado">Cancelado</SelectItem>
+            <SelectItem value="Em Projeção">Em Projeção</SelectItem>
           </SelectContent>
         </Select>
       );
@@ -158,6 +156,7 @@ const LeadsList: React.FC<LeadsListProps> = ({
             <SelectItem value="Cliente">Cliente</SelectItem>
             <SelectItem value="Cancelado">Cancelado</SelectItem>
             <SelectItem value="Lead">Lead</SelectItem>
+            <SelectItem value="Em Projeção">Em Projeção</SelectItem>
             <SelectItem value="Quente">Quente</SelectItem>
             <SelectItem value="Morno">Morno</SelectItem>
             <SelectItem value="Frio">Frio</SelectItem>
@@ -167,15 +166,11 @@ const LeadsList: React.FC<LeadsListProps> = ({
     }
   };
 
-  // Determinar se deve mostrar a coluna de temperatura
   const showTemperatureColumn = filter !== 'clientes';
-
-  // Determinar se deve mostrar todas as ações ou apenas visualização
   const showAllActions = filter !== 'clientes';
 
   return (
     <div className="mt-6">
-      {/* Barra de busca e filtros */}
       <div className="flex gap-4 mb-4 items-center">
         <Input
           placeholder="Buscar por nome, razão social ou cidade"
@@ -204,7 +199,6 @@ const LeadsList: React.FC<LeadsListProps> = ({
         )}
       </div>
 
-      {/* Tabela de leads */}
       <Table>
         <TableHeader>
           <TableRow>
@@ -221,7 +215,7 @@ const LeadsList: React.FC<LeadsListProps> = ({
             <TableHead>Estado</TableHead>
             <TableHead>Status</TableHead>
             {showTemperatureColumn && <TableHead>Temperatura</TableHead>}
-            <TableHead>Detalhes Status</TableHead>
+            <TableHead>Em Projeção</TableHead>
             <TableHead>Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -257,16 +251,16 @@ const LeadsList: React.FC<LeadsListProps> = ({
                   </Badge>
                 </TableCell>
               )}
-              <TableCell>{lead.detalhesStatus}</TableCell>
+              <TableCell>
+                <Badge variant={lead.emProjecao ? "default" : "outline"}>
+                  {lead.emProjecao ? "Sim" : "Não"}
+                </Badge>
+              </TableCell>
               <TableCell className="flex gap-2">
-                {/* Botão de visualizar (sempre presente) */}
                 <ViewLeadDialog lead={lead} />
-
-                {/* Editar e Excluir (apenas em algumas páginas) */}
                 {showAllActions && (
                   <>
                     <EditLeadDialog lead={lead} onEditLead={onEditLead} />
-
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="sm">
@@ -278,15 +272,27 @@ const LeadsList: React.FC<LeadsListProps> = ({
                           <AlertDialogTitle>
                             Tem certeza que deseja excluir?
                           </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. O lead será removido.
+                          </AlertDialogDescription>
                         </AlertDialogHeader>
-                        <div className="flex justify-end gap-2 mt-4">
+                        <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => onDeleteLead(lead.id)}
+                            onClick={async () => {
+                              console.log('Clique no botão de excluir detectado'); // Debug log 1
+                              console.log('ID do lead a ser excluído:', lead.id); // Debug log 2
+                              try {
+                                await onDeleteLead(lead.id);
+                                console.log('Função onDeleteLead chamada com sucesso'); // Debug log 3
+                              } catch (err) {
+                                console.error('Erro ao chamar onDeleteLead:', err); // Debug log 4
+                              }
+                            }}
                           >
                             Excluir
                           </AlertDialogAction>
-                        </div>
+                        </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
                   </>

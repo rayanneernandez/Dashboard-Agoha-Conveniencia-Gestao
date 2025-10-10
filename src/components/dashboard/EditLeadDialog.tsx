@@ -22,13 +22,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Edit } from "lucide-react";
 
 // Tipo para campos editáveis
-type EditableLead = Omit<
+export type EditableLead = Omit<
   Lead,
   "id" | "dataultimaatualizacao" | "coordenadas"
 > & {
   cep?: string;
   numero?: string;
   bairro?: string;
+  imagem?: string;
+  midias?: (File | string)[];
 };
 
 interface EditLeadDialogProps {
@@ -38,6 +40,9 @@ interface EditLeadDialogProps {
 
 const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
   const [open, setOpen] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    (lead as any).imagem || null
+  );
 
   const [formData, setFormData] = useState<EditableLead>({
     nome: lead.nome,
@@ -51,11 +56,15 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
     status: lead.status,
     temperatura: lead.temperatura,
     detalhesStatus: lead.detalhesStatus,
-    emProjecao: lead.emProjecao, // já carregado do lead
+    emProjecao: lead.emProjecao,
     visitafeita: lead.visitafeita,
     cep: (lead as any).cep || "",
     numero: (lead as any).numero || "",
     bairro: (lead as any).bairro || "",
+    imagem: imagePreview,
+    midias: Array.isArray(lead.midias)
+      ? lead.midias.filter((m): m is string => typeof m === "string")
+      : [],
   });
 
   const handleInputChange = <K extends keyof EditableLead>(
@@ -65,13 +74,31 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setImagePreview(base64String);
+      setFormData((prev) => ({
+        ...prev,
+        imagem: base64String,
+        midias: [...(prev.midias || []), base64String], // adiciona a midia ao array
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Validação mínima
+
     if (!formData.nome) {
       alert("Preencha o campo obrigatório: Nome.");
       return;
     }
+
     onEditLead(lead.id, formData);
     setOpen(false);
   };
@@ -198,14 +225,15 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 </SelectContent>
               </Select>
             </div>
-            
-            
             <div>
               <Label>Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(v) =>
-                  handleInputChange("status", v as "Ativo" | "Inativo" | "Cliente" | "Cancelado" | "Lead")
+                  handleInputChange(
+                    "status",
+                    v as "Ativo" | "Inativo" | "Cliente" | "Cancelado" | "Lead"
+                  )
                 }
               >
                 <SelectTrigger>
@@ -226,7 +254,10 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 <Select
                   value={formData.temperatura ?? ""}
                   onValueChange={(v) =>
-                    handleInputChange("temperatura", v as "Quente" | "Morno" | "Frio")
+                    handleInputChange(
+                      "temperatura",
+                      v as "Quente" | "Morno" | "Frio"
+                    )
                   }
                 >
                   <SelectTrigger>
@@ -265,6 +296,30 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
                 }
               />
               <Label>Projeção</Label>
+            </div>
+
+            {/* Upload de imagem */}
+            <div className="space-y-2">
+              <Label>Imagem do Lead</Label>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="cursor-pointer"
+                  />
+                </div>
+                {imagePreview && (
+                  <div className="w-24 h-24 rounded-md overflow-hidden border">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

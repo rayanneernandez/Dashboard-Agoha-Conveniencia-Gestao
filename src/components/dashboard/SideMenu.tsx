@@ -7,7 +7,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import autoTable from "jspdf-autotable";
-import { Lead } from "@/types/lead";
+import { Lead, ESTADOS_BRASILEIROS } from "@/types/lead";
 import { toast } from "sonner";
 
 interface SideMenuProps {
@@ -23,6 +23,72 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
   
   const toggleMenu = () => {
     setIsOpen(!isOpen);
+  };
+
+  // Função para obter a região com base no estado
+  const obterRegiaoPorEstado = (estado: string): Lead['regiao'] => {
+    const estadoInfo = ESTADOS_BRASILEIROS.find(e => e.sigla === estado);
+    return estadoInfo?.regiao || 'Sul'; // 'Sul' como fallback
+  };
+
+  // Função processImportedData
+  const processImportedData = async (jsonData: any[]): Promise<Lead[]> => {
+    return jsonData.map((row) => {
+      const estado = row.Estado || "";
+      return {
+        id: Math.random().toString(36).substr(2, 9),
+        nome: row.Nome || "",
+        razaosocial: row["Razão Social"] || "",
+        email: row.Email || "",
+        telefone: row.Telefone || "",
+        endereco: row.Endereço || "",
+        numero: row.Numero || "",
+        bairro: row.Bairro || "",
+        cidade: row.Cidade || "",
+        estado: estado,
+        regiao: obterRegiaoPorEstado(estado),
+        visitafeita: row["Visita feita"] || "Não",
+        status: (row.Status || "Lead") as Lead["status"],
+        temperatura: (row.Temperatura || null) as Lead["temperatura"],
+        emProjecao: row["Em Projeção"] === "Sim",
+        detalhesStatus: row["Detalhes Status"] || "",
+        dataultimaatualizacao: new Date().toISOString(),
+        midias: [],
+      };
+    });
+  };
+
+  // Função handleFileChange
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onImportLeads) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        if (jsonData.length > 0) {
+          const importedLeads = await processImportedData(jsonData);
+          onImportLeads(importedLeads);
+          toast.success(`${importedLeads.length} leads importados com sucesso!`);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        } else {
+          toast.error("Nenhum dado encontrado na planilha");
+        }
+      } catch (error) {
+        console.error("Erro ao processar arquivo:", error);
+        toast.error("Erro ao processar arquivo");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    setIsOpen(false);
   };
 
   const menuItems = [
@@ -49,17 +115,19 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
           Estado: lead.estado,
           "Visita feita": lead.visitafeita,
           Status: lead.status,
-          Temperatura: lead.temperatura,
+          Temperatura: lead.temperatura || "-",
+          "Em Projeção": lead.emProjecao ? "Sim" : "Não",
           "Detalhes Status": lead.detalhesStatus,
         };
       });
-
+  
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Leads");
-
+  
       XLSX.writeFile(wb, "leads.xlsx");
       setIsOpen(false);
+      toast.success("Leads exportados com sucesso!");
     } catch (error) {
       console.error("Erro ao exportar Excel:", error);
       toast.error("Erro ao exportar para Excel");
@@ -106,29 +174,51 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
   };
 
   // Exportar Dashboard para PDF
-  const exportDashboardToPDF = () => {
+  const exportDashboardToPDF = async () => {
     if (!dashboardRef?.current) {
       toast.error("Não foi possível exportar o dashboard");
       return;
     }
-
+  
     try {
-      const element = dashboardRef.current;
-      
-      html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#F8F9FA',
-      }).then((canvas) => {
+      // Seleciona apenas as seções que queremos
+      const contentDiv = dashboardRef.current.querySelector('.flex.flex-col.space-y-6.p-6');
+      if (!contentDiv) {
+        toast.error("Não foi possível encontrar o conteúdo do dashboard");
+        return;
+      }
+  
+      // Cria um container temporário
+      const container = document.createElement('div');
+      container.style.backgroundColor = '#FFFFFF';
+      container.style.padding = '20px';
+  
+      // Clona apenas as três primeiras divs (métricas, mapa e gráficos)
+      const children = Array.from(contentDiv.children).slice(0, 3);
+      children.forEach(child => {
+        container.appendChild(child.cloneNode(true));
+      });
+  
+      // Adiciona o container ao documento temporariamente para captura
+      document.body.appendChild(container);
+  
+      try {
+        const canvas = await html2canvas(container, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#FFFFFF',
+          logging: true
+        });
+  
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('l', 'mm', 'a4');
         
-        const pdfWidth = 297;
+        const pdfWidth = 297; // A4 landscape
         const pdfHeight = 210;
         
         const imgWidth = canvas.width;
         const imgHeight = canvas.height;
-        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight) * 0.9;
+        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight) * 0.95;
         
         const xPos = (pdfWidth - imgWidth * ratio) / 2;
         const yPos = 20;
@@ -139,111 +229,56 @@ const SideMenu = ({ leads, dashboardRef, onImportLeads }: SideMenuProps) => {
         
         pdf.addImage(imgData, 'PNG', xPos, yPos, imgWidth * ratio, imgHeight * ratio);
         
-        pdf.save('dashboard.pdf');
-        setIsOpen(false);
-      });
+        const dataHora = new Date().toLocaleString('pt-BR');
+        pdf.setFontSize(10);
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(`Exportado em: ${dataHora}`, 10, pdfHeight - 10);
+        
+        pdf.save('dashboard-resumo.pdf');
+        toast.success("Dashboard exportado com sucesso!");
+      } finally {
+        // Sempre remove o container temporário
+        document.body.removeChild(container);
+      }
     } catch (error) {
       console.error("Erro ao exportar dashboard:", error);
       toast.error("Erro ao exportar dashboard");
     }
-  };
-
-  // Importar Leads
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !onImportLeads) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const data = new Uint8Array(event.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
-
-        if (jsonData.length > 0) {
-          const importedLeads = await processImportedData(jsonData);
-          onImportLeads(importedLeads as Lead[]);
-          toast.success(`${importedLeads.length} leads importados com sucesso!`);
-        } else {
-          toast.error("Nenhum dado encontrado na planilha");
-        }
-      } catch (error) {
-        console.error("Erro ao processar arquivo:", error);
-        toast.error("Erro ao processar arquivo");
-      }
-    };
-    reader.readAsArrayBuffer(file);
+    
+    // Fecha o menu após a exportação
     setIsOpen(false);
-  };
-
-  const processImportedData = async (jsonData: any[]) => {
-    return jsonData.map((row) => {
-      const estado = row["Estado"] || "SP";
-      const regiao = obterRegiaoPorEstado(estado);
-      
-      return {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-        nome: row["Nome"] || "",
-        razaosocial: row["Razão Social"] || "",
-        email: row["Email"] || "",
-        telefone: row["Telefone"] || "",
-        endereco: row["Endereço"] || "",
-        numero: row["Numero"] || "",
-        bairro: row["Bairro"] || "",
-        cidade: row["Cidade"] || "",
-        estado: estado,
-        regiao: regiao,
-        status: row["Status"] === "Inativo" ? "Inativo" : "Ativo",
-        temperatura: row["Temperatura"] === "Quente" ? "Quente" : row["Temperatura"] === "Frio" ? "Frio" : null,
-        emProjecao: false,
-        detalhesStatus: row["Detalhes Status"] || "",
-        visitafeita: row["Visita feita"] === "Sim" ? "Sim" : "Não",
-        dataultimaatualizacao: new Date().toISOString(),
-      };
-    });
-  };
-
-  const obterRegiaoPorEstado = (estado: string) => {
-    const regioes: Record<string, string> = {
-      "AC": "Norte", "AM": "Norte", "AP": "Norte", "PA": "Norte", "RO": "Norte", "RR": "Norte", "TO": "Norte",
-      "AL": "Nordeste", "BA": "Nordeste", "CE": "Nordeste", "MA": "Nordeste", "PB": "Nordeste", 
-      "PE": "Nordeste", "PI": "Nordeste", "RN": "Nordeste", "SE": "Nordeste",
-      "DF": "Centro-Oeste", "GO": "Centro-Oeste", "MS": "Centro-Oeste", "MT": "Centro-Oeste",
-      "ES": "Sudeste", "MG": "Sudeste", "RJ": "Sudeste", "SP": "Sudeste",
-      "PR": "Sul", "RS": "Sul", "SC": "Sul"
-    };
-    return regioes[estado] || "Sudeste";
   };
 
   return (
     <>
-      {/* Botão do menu hamburguer com cores adaptativas */}
+      {/* Botão do menu */}
       <Button 
         variant="ghost" 
         size="icon" 
-        className="fixed top-2 left-4 z-40 transition-colors duration-200 w-14 h-14 flex items-center justify-center shadow-md
-          bg-[#660629] text-white hover:bg-[#7a0731]
-          dark:bg-white dark:text-[#660629] dark:hover:bg-gray-100"
+        className="fixed top-2 left-2 z-40 transition-colors duration-200 w-10 h-10 flex items-center justify-center shadow-md
+          bg-[#660629] text-white hover:bg-[#7a0731]"
         onClick={toggleMenu}
       >
-        <Menu className="h-8 w-8" />
+        <Menu className="h-6 w-6" />
       </Button>
-
-      {/* Overlay */}
+    
+      {/* Overlay invisível que apenas captura cliques */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/20 z-45"
+          className="fixed inset-0"
+          style={{ zIndex: 45 }}
           onClick={() => setIsOpen(false)}
         />
       )}
-
+    
       {/* Menu lateral */}
-      <div className={cn(
-        "fixed top-0 left-0 h-full w-64 bg-white shadow-xl z-50 transition-transform duration-300 transform flex flex-col",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      <div 
+        className={cn(
+          "fixed top-0 left-0 h-full w-64 bg-white shadow-xl transition-transform duration-300 transform",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+        style={{ zIndex: 50 }}
+      >
         <div className="p-4 border-b">
           <h2 className="text-xl font-bold text-[#660629]">Dashboard de Leads</h2>
           <p className="text-sm text-gray-500">AgHora Conveniência</p>

@@ -14,13 +14,10 @@ export interface Lead {
   temperatura: 'Quente' | 'Morno' | 'Frio' | null;
   emProjecao: boolean;
   detalhesStatus: string;
-  visitafeita: 'Sim' | 'Não'; // enum obrigatório para o banco
+  visitafeita: 'Sim' | 'Não'; 
   dataultimaatualizacao?: string;
-  
-  coordenadas?: {
-    lat: number;
-    lng: number;
-  };
+  midias?: (File | string)[]; // Alterado para aceitar tanto File quanto string
+  coordenadas?: { lat: number; lng: number };
 }
 
 export interface LeadFormData {
@@ -38,18 +35,18 @@ export interface LeadFormData {
   temperatura: Lead["temperatura"];
   emProjecao: boolean;
   detalhesStatus: string;
-  visitafeita: boolean; // boolean no formulário
-  coordenadas?: {
-    lat: number;
-    lng: number;
-  };
+  visitafeita: 'Sim' | 'Não'; 
+  midias: (File | null)[]; // Alterado de imagem para midias
+  coordenadas?: { lat: number; lng: number };
 }
 
-// Converte LeadFormData para Lead pronto pro banco
-export const mapLeadToDB = (data: LeadFormData & { dataultimaatualizacao?: string }): Omit<Lead, "id"> => ({
+// Atualizar a função mapLeadToDB também
+export const mapLeadToDB = (data: LeadFormData & { dataultimaatualizacao?: string }) => ({
   ...data,
-  visitafeita: data.visitafeita ? "Sim" : "Não",
-  dataultimaatualizacao: data.dataultimaatualizacao,
+  midias: data.midias.filter((m): m is File => m !== null), // Filtra os nulos
+  dataultimaatualizacao: new Date().toISOString(),
+  temperatura: data.status === "Lead" ? data.temperatura : null,
+  emProjecao: !!data.emProjecao,
 });
 
 export interface DashboardStats {
@@ -59,13 +56,7 @@ export interface DashboardStats {
   leadsQuentes: number;
   leadsFrios: number;
   leadsEmProjecao: number;
-  distribuicaoPorRegiao: {
-    Norte: number;
-    Nordeste: number;
-    'Centro-Oeste': number;
-    Sudeste: number;
-    Sul: number;
-  };
+  distribuicaoPorRegiao: { Norte: number; Nordeste: number; 'Centro-Oeste': number; Sudeste: number; Sul: number; };
 }
 
 export const ESTADOS_BRASILEIROS = [
@@ -96,15 +87,4 @@ export const ESTADOS_BRASILEIROS = [
   { sigla: 'SP', nome: 'São Paulo', regiao: 'Sudeste' as const },
   { sigla: 'SE', nome: 'Sergipe', regiao: 'Nordeste' as const },
   { sigla: 'TO', nome: 'Tocantins', regiao: 'Norte' as const },
-] as const;
-
-export const STATUS_OPTIONS = [
-  'Loja operando',
-  'Pediu pra não renovar contrato',
-  'Loja fechou',
-  'Loja nova (aguardando inauguração)',
-  'Cancelou contrato ativo',
-  'Em negociação',
-  'Aguardando resposta',
-  'Outros',
 ] as const;

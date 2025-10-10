@@ -28,6 +28,7 @@ const LeadsListSimplificado: React.FC<LeadsListSimplificadoProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
+  const [filterProjecao, setFilterProjecao] = useState("todos"); // ✅ novo filtro
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>(leads);
 
   useEffect(() => {
@@ -41,31 +42,52 @@ const LeadsListSimplificado: React.FC<LeadsListSimplificadoProps> = ({
         const matchesEstado =
           filterEstado === "todos" || lead.estado === filterEstado;
 
-        return matchesSearch && matchesEstado;
+        const matchesProjecao =
+          filterProjecao === "todos"
+            ? true
+            : filterProjecao === "sim"
+            ? lead.emProjecao === true
+            : lead.emProjecao === false;
+
+        return matchesSearch && matchesEstado && matchesProjecao;
       })
     );
-  }, [leads, searchTerm, filterEstado]);
+  }, [leads, searchTerm, filterEstado, filterProjecao]);
 
   return (
     <div className="mt-6">
       {/* Barra de busca e filtros */}
-      <div className="flex gap-4 mb-4 items-center">
+      <div className="flex flex-wrap gap-4 mb-4 items-center">
         <Input
           placeholder="Buscar por nome, razão social ou cidade"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 min-w-[250px]"
         />
+
         <Select value={filterEstado} onValueChange={setFilterEstado}>
           <SelectTrigger>
             <SelectValue placeholder="Filtrar por estado" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="todos">Todos os estados</SelectItem>
             {ESTADOS_BRASILEIROS.map((e) => (
               <SelectItem key={e.sigla} value={e.sigla}>
                 {e.nome}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        {/* ✅ Novo filtro: Em Projeção */}
+        <Select value={filterProjecao} onValueChange={setFilterProjecao}>
+          <SelectTrigger>
+            <SelectValue placeholder="Filtrar por projeção" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="sim">Em projeção</SelectItem>
+            <SelectItem value="nao">Não em projeção</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -79,7 +101,7 @@ const LeadsListSimplificado: React.FC<LeadsListSimplificadoProps> = ({
             <TableHead>Cidade</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Detalhes Status</TableHead>
+            <TableHead>Em Projeção</TableHead>
             <TableHead>Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -99,9 +121,12 @@ const LeadsListSimplificado: React.FC<LeadsListSimplificadoProps> = ({
                   {lead.status}
                 </Badge>
               </TableCell>
-              <TableCell>{lead.detalhesStatus}</TableCell>
               <TableCell>
-                {/* Apenas botão de visualizar */}
+                <Badge variant={lead.emProjecao ? "default" : "outline"}>
+                  {lead.emProjecao ? "Sim" : "Não"}
+                </Badge>
+              </TableCell>
+              <TableCell>
                 <ViewLeadDialog lead={lead} />
               </TableCell>
             </TableRow>

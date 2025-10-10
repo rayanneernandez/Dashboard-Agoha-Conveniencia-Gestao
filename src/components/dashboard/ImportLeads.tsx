@@ -49,6 +49,7 @@ const ImportLeads = ({ onImportLeads }: ImportLeadsProps) => {
           email: row["Email"] || "",
           telefone: row["Telefone"] || "",
           endereco: row["Endereço"] || "",
+          cep: row["CEP"] || "", // Adicionando o campo cep
           numero: row["Numero"] || "",
           bairro: row["Bairro"] || "",
           cidade: row["Cidade"] || "",

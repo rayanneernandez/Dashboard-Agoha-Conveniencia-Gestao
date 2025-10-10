@@ -1,62 +1,72 @@
 import { toast } from "sonner";
 
-export async function geocodeAddress(endereco: string, numero: string, cidade: string, estado: string, index: number = 0) {
+export async function geocodeAddress(endereco: string, numero: string, cidade: string, estado: string) {
   try {
     // Monta o endereço completo
     const enderecoCompleto = `${endereco} ${numero}, ${cidade}, ${estado}, Brasil`;
     
-
+    // Codifica o endereço para URL
+    const query = encodeURIComponent(enderecoCompleto);
     
-    // Por enquanto, vamos retornar coordenadas aproximadas para cada estado
-    const coordenadasPorEstado: { [key: string]: { lat: number; lng: number } } = {
-      'AC': { lat: -9.0238, lng: -70.812 },
-      'AL': { lat: -9.5713, lng: -36.782 },
-      'AP': { lat: 0.902, lng: -52.003 },
-      'AM': { lat: -3.4168, lng: -65.8561 },
-      'BA': { lat: -12.9718, lng: -38.5011 },
-      'CE': { lat: -3.7172, lng: -38.5433 },
-      'DF': { lat: -15.7801, lng: -47.9292 },
-      'ES': { lat: -20.2976, lng: -40.2958 },
-      'GO': { lat: -16.6864, lng: -49.2643 },
-      'MA': { lat: -2.5307, lng: -44.2987 },
-      'MT': { lat: -15.601, lng: -56.0974 },
-      'MS': { lat: -20.4697, lng: -54.6201 },
-      'MG': { lat: -19.9167, lng: -43.9345 },
-      'PA': { lat: -1.4554, lng: -48.4898 },
-      'PB': { lat: -7.115, lng: -34.8631 },
-      'PR': { lat: -25.4195, lng: -49.2646 },
-      'PE': { lat: -8.0476, lng: -34.8770 },
-      'PI': { lat: -5.0892, lng: -42.8019 },
-      'RJ': { lat: -22.9068, lng: -43.1729 },
-      'RN': { lat: -5.7945, lng: -35.2120 },
-      'RS': { lat: -30.0346, lng: -51.2177 },
-      'RO': { lat: -8.7619, lng: -63.9039 },
-      'RR': { lat: 2.8235, lng: -60.6758 },
-      'SC': { lat: -27.5945, lng: -48.5477 },
-      'SP': { lat: -23.5505, lng: -46.6333 },
-      'SE': { lat: -10.9091, lng: -37.0677 },
-      'TO': { lat: -10.1753, lng: -48.2982 }
-    };
-
-    // Pega as coordenadas base do estado
-    const baseCoords = coordenadasPorEstado[estado] || { lat: -15.7801, lng: -47.9292 };
-
-    // Cria uma variação baseada no índice do lead
-    // Isso criará um padrão em espiral ao redor do ponto central
-    const angle = index * (Math.PI / 4); // 45 graus entre cada ponto
-    const radius = 0.02 * (Math.floor(index / 8) + 1); // Aumenta o raio a cada 8 pontos
+    // Adiciona um atraso para respeitar o limite de requisições do Nominatim
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    const varLat = radius * Math.cos(angle);
-    const varLng = radius * Math.sin(angle);
+    // Faz a requisição para a API do Nominatim
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1&countrycodes=br`,
+      {
+        headers: {
+          'User-Agent': 'AgHora Dashboard (contato@aghora.com.br)',
+          'Accept-Language': 'pt-BR'
+        }
+      }
+    );
 
-    // Retorna as coordenadas com a variação
-    return {
-      lat: baseCoords.lat + varLat,
-      lng: baseCoords.lng + varLng
-    };
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Verifica se encontrou algum resultado
+    if (data && data.length > 0) {
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon)
+      };
+    }
+
+    // Se não encontrou o endereço específico, tenta encontrar a cidade
+    const cidadeQuery = encodeURIComponent(`${cidade}, ${estado}, Brasil`);
+    const cidadeResponse = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${cidadeQuery}&limit=1&countrycodes=br`,
+      {
+        headers: {
+          'User-Agent': 'AgHora Dashboard (contato@aghora.com.br)',
+          'Accept-Language': 'pt-BR'
+        }
+      }
+    );
+
+    if (!cidadeResponse.ok) {
+      throw new Error(`HTTP error! status: ${cidadeResponse.status}`);
+    }
+
+    const cidadeData = await cidadeResponse.json();
+
+    if (cidadeData && cidadeData.length > 0) {
+      return {
+        lat: parseFloat(cidadeData[0].lat),
+        lng: parseFloat(cidadeData[0].lon)
+      };
+    }
+
+    // Se não encontrou nem a cidade, usa as coordenadas do estado
+    throw new Error('Endereço não encontrado');
+
   } catch (error) {
     console.error("Erro ao geocodificar endereço:", error);
-    // Retorna coordenadas do centro do Brasil em caso de erro
-    return { lat: -15.7801, lng: -47.9292 };
+    // Em caso de erro, retorna null para que o componente possa tratar adequadamente
+    return null;
   }
 }

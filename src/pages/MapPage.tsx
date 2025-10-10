@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Lead } from "@/types/lead";
 import { toast } from "sonner";
-import SideMenu from "@/components/dashboard/SideMenu";
 import { Loader2 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { geocodeAddress } from "@/lib/geocoding";
+import AIChat from '@/components/dashboard/AIChat';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 
 // Configuração do ícone padrão
 const DefaultIcon = L.icon({
@@ -29,19 +30,23 @@ const MapPage = () => {
   const normalizeVisitafeita = (v: boolean | "Sim" | "Não"): "Sim" | "Não" =>
     v === true || v === "Sim" ? "Sim" : "Não";
 
-  const processLead = async (lead: Lead, index: number) => {
+  const processLead = async (lead: Lead) => {
     try {
       console.log(`Processando lead: ${lead.nome}`);
+      
+      // Se já tiver coordenadas válidas, usa elas
+      if (lead.coordenadas?.lat && lead.coordenadas?.lng) {
+        return lead;
+      }
+
       const coords = await geocodeAddress(
         lead.endereco,
         lead.numero,
         lead.cidade,
-        lead.estado,
-        index // Passando o índice para criar variação nas coordenadas
+        lead.estado
       );
 
       if (coords) {
-        // Não salvamos mais no banco, apenas retornamos o lead com as coordenadas
         return { ...lead, coordenadas: coords };
       }
       return lead;
@@ -77,36 +82,22 @@ const MapPage = () => {
       const processedLeads = [];
       const newMarkers = [];
 
-      // Agrupa leads por estado para melhor distribuição
-      const leadsPorEstado: { [estado: string]: Lead[] } = {};
-      data.forEach(lead => {
-        if (!leadsPorEstado[lead.estado]) {
-          leadsPorEstado[lead.estado] = [];
-        }
-        leadsPorEstado[lead.estado].push(lead);
-      });
+      // Processa cada lead individualmente
+      for (const lead of data) {
+        const normalizedLead = {
+          ...lead,
+          visitafeita: normalizeVisitafeita(lead.visitafeita),
+        };
+        
+        const processedLead = await processLead(normalizedLead);
+        processedLeads.push(processedLead);
 
-      // Processa os leads estado por estado
-      let globalIndex = 0;
-      for (const estado of Object.keys(leadsPorEstado)) {
-        for (const lead of leadsPorEstado[estado]) {
-          const normalizedLead = {
-            ...lead,
-            visitafeita: normalizeVisitafeita(lead.visitafeita),
-          };
-          
-          const processedLead = await processLead(normalizedLead, globalIndex);
-          processedLeads.push(processedLead);
-
-          if (processedLead.coordenadas) {
-            newMarkers.push({
-              lat: processedLead.coordenadas.lat,
-              lng: processedLead.coordenadas.lng,
-              lead: processedLead
-            });
-          }
-          
-          globalIndex++;
+        if (processedLead.coordenadas) {
+          newMarkers.push({
+            lat: processedLead.coordenadas.lat,
+            lng: processedLead.coordenadas.lng,
+            lead: processedLead
+          });
         }
       }
 
@@ -128,8 +119,7 @@ const MapPage = () => {
 
   // Resto do componente permanece o mesmo, apenas garantindo que o mapa seja renderizado mesmo sem marcadores
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
-      <SideMenu leads={leads} />
+    <DashboardLayout leads={leads}>
       
       <div className="bg-gradient-header text-white py-3 px-6">
         <div className="max-w-7xl mx-auto flex justify-between items-center gap-4 ml-16 md:ml-20">
@@ -199,7 +189,10 @@ const MapPage = () => {
           </div>
         )}
       </div>
-    </div>
+
+      {/* Adiciona o chat */}
+      <AIChat leads={leads} />
+    </DashboardLayout>
   );
 };
 

@@ -6,6 +6,7 @@ import SideMenu from "@/components/dashboard/SideMenu";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import DashboardLayout from '@/components/layout/DashboardLayout';
 
 interface LeadsListPageProps {
   filter: 'all' | 'ativos' | 'inativos' | 'leads' | 'clientes' | 'quentes';
@@ -93,9 +94,78 @@ const LeadsListPage = ({ filter }: LeadsListPageProps) => {
   };
 
   const handleDeleteLead = async (id: string) => {
-    const { error } = await supabase.from("leads").delete().eq("id", id);
-    if (error) return toast.error(`Erro ao excluir lead: ${error.message}`);
-    setLeads((prev) => prev.filter((l) => l.id !== id));
+    try {
+      console.log('Iniciando processo de deleção do lead:', id); // Debug log 1
+  
+      // Primeiro, verifica se o lead existe
+      const { data: existingLead, error: checkError } = await supabase
+        .from("leads")
+        .select("id")
+        .eq("id", id)
+        .single(); // Usando single() para garantir um único resultado
+  
+      console.log('Resultado da verificação do lead:', { existingLead, checkError }); // Debug log 2
+  
+      if (checkError) {
+        console.error("Erro ao verificar lead:", checkError);
+        toast.error("Erro ao verificar lead");
+        return;
+      }
+  
+      if (!existingLead) {
+        console.error("Lead não encontrado");
+        toast.error("Lead não encontrado");
+        return;
+      }
+  
+      // Tenta excluir o lead
+      console.log('Tentando excluir o lead do Supabase...'); // Debug log 3
+      const { error: deleteError } = await supabase
+        .from("leads")
+        .delete()
+        .eq("id", id)
+        .single(); // Usando single() para garantir um único resultado
+  
+      console.log('Resultado da deleção:', { deleteError }); // Debug log 4
+  
+      if (deleteError) {
+        console.error("Erro ao excluir lead:", deleteError);
+        toast.error(`Erro ao excluir lead: ${deleteError.message}`);
+        return;
+      }
+  
+      // Atualiza o estado local primeiro
+      console.log('Atualizando estado local...'); // Debug log 5
+      setLeads(prev => prev.filter(lead => lead.id !== id));
+      
+      // Recarrega a lista completa para garantir sincronização
+      console.log('Recarregando lista completa...'); // Debug log 6
+      const { data: updatedLeads, error: fetchError } = await supabase
+        .from("leads")
+        .select("*")
+        .order('nome');
+  
+      if (fetchError) {
+        console.error("Erro ao recarregar leads:", fetchError);
+        toast.error("Erro ao atualizar a lista");
+        return;
+      }
+  
+      // Atualiza o estado com os dados mais recentes do banco
+      if (updatedLeads) {
+        console.log('Atualizando estado com dados do banco...'); // Debug log 7
+        const normalizedLeads = updatedLeads.map(l => ({
+          ...l,
+          visitafeita: normalizeVisitafeita(l.visitafeita)
+        }));
+        setLeads(normalizedLeads);
+        toast.success("Lead excluído com sucesso!");
+      }
+  
+    } catch (err) {
+      console.error("Erro completo:", err);
+      toast.error("Erro ao excluir lead");
+    }
   };
 
   const handleDeleteMultipleLeads = async (ids: string[]) => {

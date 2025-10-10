@@ -5,6 +5,7 @@ import SideMenu from "@/components/dashboard/SideMenu";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import DashboardLayout from '@/components/layout/DashboardLayout';
 
 interface LeadsPageProps {
   filter: 'leads' | 'clientes' | 'quentes';
@@ -127,7 +128,7 @@ const LeadsPage = ({ filter }: LeadsPageProps) => {
       />
       
       <div className="bg-gradient-header text-white py-3 px-6">
-        <div className="max-w-7xl mx-auto flex justify-between items-center gap-4 ml-16 md:ml-20">
+        <div className="max-w-7xl mx-auto flex justify-end items-center gap-4">
           <div className="flex items-center gap-3">
             <img
               src="/logo.png"
