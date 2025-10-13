@@ -9,6 +9,7 @@ export interface Lead {
   bairro: string;
   cidade: string;
   estado: string;
+  cep?: string;
   regiao: 'Norte' | 'Nordeste' | 'Centro-Oeste' | 'Sudeste' | 'Sul';
   status: 'Ativo' | 'Inativo' | 'Cliente' | 'Cancelado' | 'Lead';
   temperatura: 'Quente' | 'Morno' | 'Frio' | null;
@@ -16,7 +17,7 @@ export interface Lead {
   detalhesStatus: string;
   visitafeita: 'Sim' | 'Não'; 
   dataultimaatualizacao?: string;
-  midias?: (File | string)[]; // Alterado para aceitar tanto File quanto string
+  midias?: (File | string)[];
   coordenadas?: { lat: number; lng: number };
 }
 
@@ -30,13 +31,14 @@ export interface LeadFormData {
   bairro: string;
   cidade: string;
   estado: Lead["estado"];
+  cep?: string;
   regiao: Lead["regiao"];
   status: Lead["status"];
   temperatura: Lead["temperatura"];
   emProjecao: boolean;
   detalhesStatus: string;
   visitafeita: 'Sim' | 'Não'; 
-  midias: (File | null)[]; // Alterado de imagem para midias
+  midias: (File | null)[];
   coordenadas?: { lat: number; lng: number };
 }
 

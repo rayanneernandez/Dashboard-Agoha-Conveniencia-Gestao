@@ -124,10 +124,11 @@ const LeadForm = ({ onAddLead, open, onOpenChange }: LeadFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.midias.length === 0) {
-      toast.error("Adicione pelo menos uma mídia.");
-      return;
-    }
+    // REMOVIDO: bloqueio quando não há midias
+    // if (formData.midias.length === 0) {
+    //   toast.error("Adicione pelo menos uma mídia.");
+    //   return;
+    // }
 
     setLoading(true);
 
@@ -351,7 +352,7 @@ const LeadForm = ({ onAddLead, open, onOpenChange }: LeadFormProps) => {
 
           {/* Upload mídias */}
           <div>
-            <Label>Mídias (imagens e vídeos)</Label>
+            <Label>Mídias (opcional)</Label>
             <div className="flex items-center gap-3">
               <Input type="file" accept="image/*,video/*" onChange={handleMidiasChange} multiple />
               <ImageIcon className="h-5 w-5 text-[#660629]" />
