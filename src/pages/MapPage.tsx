@@ -219,6 +219,23 @@ function MapPage() {
     faltando.slice(0, 50).forEach(geocodeAndPersist);
   }, [leads]);
 
+  // Define a função antes do return (fora do JSX)
+  const statusColor = (s?: Lead["status"]) => {
+    switch (s) {
+      case "Cliente":
+      case "Ativo":
+        return "bg-green-100 text-green-700";
+      case "Cancelado":
+        return "bg-red-100 text-red-700";
+      case "Inativo":
+        return "bg-gray-200 text-gray-700";
+      case "Lead":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-600";
+    }
+  };
+
   return (
     <DashboardLayout leads={leads}>
       <div className="max-w-7xl mx-auto p-6 space-y-8">
@@ -240,14 +257,29 @@ function MapPage() {
             >
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; OpenStreetMap'
+                attribution="&copy; OpenStreetMap"
               />
               {markers.map((m, i) => (
                 <Marker key={`${m.lead.id}-${i}`} position={[m.lat, m.lng]}>
                   <Popup>
                     <h3 className="font-bold text-[#660629]">{m.lead.nome}</h3>
-                    <p className="text-sm">{m.lead.endereco}, {m.lead.cidade}</p>
-                    <p className="text-xs">{m.lead.estado} - {m.lead.cep}</p>
+                    <div className={`inline-block px-2 py-0.5 rounded text-xs font-medium mt-1 ${statusColor(m.lead.status)}`}>
+                      {m.lead.status || "—"}
+                    </div>
+                    <p className="text-sm mt-2">
+                      {m.lead.endereco}{m.lead.numero ? `, ${m.lead.numero}` : ""}, {m.lead.cidade}
+                    </p>
+                    <p className="text-xs">{m.lead.estado} - {m.lead.cep || "—"}</p>
+                    {m.lead.status === "Lead" && (
+                      <p className="text-xs mt-1">
+                        Temperatura: {m.lead.temperatura || "—"}
+                      </p>
+                    )}
+                    {m.lead.detalhesStatus && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        {m.lead.detalhesStatus}
+                      </p>
+                    )}
                   </Popup>
                 </Marker>
               ))}
