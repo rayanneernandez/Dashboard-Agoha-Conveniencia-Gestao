@@ -4,6 +4,7 @@ import NotFound from "./pages/NotFound";
 import MapPage from "./pages/MapPage";
 import LeadsListPage from "./pages/LeadsListPage";
 import { Toaster } from "sonner";
+import DebugGeocodePage from "./pages/DebugGeocodePage";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/ativos" element={<LeadsListPage filter="ativos" />} />
         <Route path="/inativos" element={<LeadsListPage filter="inativos" />} />
         <Route path="/mapa" element={<MapPage />} />
+        <Route path="/__debug_geocode" element={<DebugGeocodePage />} />
       </Routes>
     </BrowserRouter>
   );
