@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Lead, ESTADOS_BRASILEIROS } from "@/types/lead";
+import { useState, useEffect } from "react";
+import { Lead, ESTADOS_BRASILEIROS, EditableLead } from "@/types/lead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,97 +10,150 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Edit } from "lucide-react";
-
-// Tipo para campos editáveis
-export type EditableLead = Omit<
-  Lead,
-  "id" | "dataultimaatualizacao" | "coordenadas"
-> & {
-  cep?: string;
-  numero?: string;
-  bairro?: string;
-  imagem?: string;
-  midias?: (File | string)[];
-};
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Loader2, Edit } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabaseClient";
 
 interface EditLeadDialogProps {
   lead: Lead;
-  onEditLead: (id: string, leadData: EditableLead) => void;
+  onEditLead: (id: string, updatedLead: Omit<Lead, "id" | "dataultimaatualizacao">) => void;
 }
+
+const BUCKET_NAME = "leads-media";
+const MAX_FILE_SIZE_MB = 50;
 
 const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
   const [open, setOpen] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(
-    (lead as any).imagem || null
-  );
-
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<EditableLead>({
     nome: lead.nome,
     razaosocial: lead.razaosocial,
     email: lead.email,
     telefone: lead.telefone,
     endereco: lead.endereco,
+    numero: lead.numero,
+    bairro: lead.bairro,
     cidade: lead.cidade,
     estado: lead.estado,
+    cep: lead.cep,
     regiao: lead.regiao,
     status: lead.status,
     temperatura: lead.temperatura,
     detalhesStatus: lead.detalhesStatus,
     emProjecao: lead.emProjecao,
     visitafeita: lead.visitafeita,
-    cep: (lead as any).cep || "",
-    numero: (lead as any).numero || "",
-    bairro: (lead as any).bairro || "",
-    imagem: imagePreview,
-    midias: Array.isArray(lead.midias)
+    midias: Array.isArray(lead.midias) 
       ? lead.midias.filter((m): m is string => typeof m === "string")
       : [],
   });
+  const [previews, setPreviews] = useState<{ url: string; file?: File }[]>([]);
 
-  const handleInputChange = <K extends keyof EditableLead>(
-    field: K,
-    value: EditableLead[K]
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  useEffect(() => {
+    console.log("🔄 Lead recebido no EditLeadDialog:", lead);
+    
+    setFormData({
+      nome: lead.nome,
+      razaosocial: lead.razaosocial,
+      email: lead.email,
+      telefone: lead.telefone,
+      endereco: lead.endereco,
+      numero: lead.numero,
+      bairro: lead.bairro,
+      cidade: lead.cidade,
+      estado: lead.estado,
+      cep: lead.cep,
+      regiao: lead.regiao,
+      status: lead.status,
+      temperatura: lead.temperatura,
+      detalhesStatus: lead.detalhesStatus,
+      emProjecao: lead.emProjecao,
+      visitafeita: lead.visitafeita,
+      midias: Array.isArray(lead.midias) 
+        ? lead.midias.filter((m): m is string => typeof m === "string")
+        : [],
+    });
+    
+    const existingPreviews = (lead.midias || [])
+      .filter((url): url is string => typeof url === 'string')
+      .map(url => ({ url }));
+    setPreviews(existingPreviews);
+    
+    console.log("📝 FormData inicializado:", formData);
+  }, [lead]);
+
+  const handleInputChange = <K extends keyof EditableLead>(field: K, value: EditableLead[K]) => {
+    console.log(`🔄 Campo alterado: ${String(field)} = ${value}`);
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const uploadedUrls: string[] = [];
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setImagePreview(base64String);
-      setFormData((prev) => ({
-        ...prev,
-        imagem: base64String,
-        midias: [...(prev.midias || []), base64String], // adiciona a midia ao array
-      }));
-    };
-    reader.readAsDataURL(file);
-  };
+    for (const file of files) {
+      if (file.size / 1024 / 1024 > MAX_FILE_SIZE_MB) {
+        toast.error(`Arquivo ${file.name} excede ${MAX_FILE_SIZE_MB}MB.`);
+        return;
+      }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+      const timestamp = Date.now();
+      const safeName = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
+      const filePath = `${timestamp}_${safeName}`;
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, file, { upsert: true, contentType: file.type });
 
-    if (!formData.nome) {
-      alert("Preencha o campo obrigatório: Nome.");
-      return;
+      if (error) throw error;
+
+      const { data: publicData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(data.path);
+      if (!publicData?.publicUrl) throw new Error("Não foi possível gerar URL pública da mídia.");
+
+      uploadedUrls.push(publicData.publicUrl);
     }
 
-    onEditLead(lead.id, formData);
-    setOpen(false);
+    const currentMidias = formData.midias || [];
+    const allMidias = [...currentMidias.filter((m): m is string => typeof m === 'string'), ...uploadedUrls];
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      midias: allMidias
+    }));
+    setPreviews(prev => [...prev, ...uploadedUrls.map(url => ({ url }))]);
+  };
+
+  const removeMidia = (index: number) => {
+    setPreviews(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => {
+      const currentMidias = prev.midias || [];
+      const filteredMidias = currentMidias.filter((m): m is string => typeof m === 'string');
+      return {
+        ...prev,
+        midias: filteredMidias.filter((_, i) => i !== index),
+      };
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      console.log("🔄 Iniciando edição do lead no dialog:", { id: lead.id, formData });
+      console.log("🌡️ Temperatura no formData antes do envio:", formData.temperatura);
+      
+      await onEditLead(lead.id, formData);
+      
+      console.log("✅ Edição concluída com sucesso no dialog");
+      toast.success("Lead atualizado com sucesso!");
+      setOpen(false);
+    } catch (err: any) {
+      console.error("❌ Erro na edição do lead no dialog:", err);
+      toast.error(err.message || "Erro ao atualizar lead");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -119,230 +172,127 @@ const EditLeadDialog = ({ lead, onEditLead }: EditLeadDialogProps) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Nome *</Label>
-              <Input
-                value={formData.nome}
-                onChange={(e) => handleInputChange("nome", e.target.value)}
-                required
-              />
+              <Label>Nome</Label>
+              <Input value={formData.nome} onChange={e => handleInputChange("nome", e.target.value)} />
             </div>
             <div>
               <Label>Razão Social</Label>
-              <Input
-                value={formData.razaosocial}
-                onChange={(e) =>
-                  handleInputChange("razaosocial", e.target.value)
-                }
-              />
+              <Input value={formData.razaosocial} onChange={e => handleInputChange("razaosocial", e.target.value)} />
             </div>
             <div>
               <Label>Email</Label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-              />
+              <Input value={formData.email} onChange={e => handleInputChange("email", e.target.value)} />
             </div>
             <div>
               <Label>Telefone</Label>
-              <Input
-                value={formData.telefone}
-                onChange={(e) => handleInputChange("telefone", e.target.value)}
-              />
+              <Input value={formData.telefone} onChange={e => handleInputChange("telefone", e.target.value)} />
             </div>
             <div>
               <Label>CEP</Label>
-              <Input
-                value={formData.cep}
-                onChange={(e) => handleInputChange("cep", e.target.value)}
-              />
+              <Input value={formData.cep || ""} onChange={e => handleInputChange("cep", e.target.value)} />
             </div>
             <div>
               <Label>Endereço</Label>
-              <Input
-                value={formData.endereco}
-                onChange={(e) => handleInputChange("endereco", e.target.value)}
-              />
+              <Input value={formData.endereco} onChange={e => handleInputChange("endereco", e.target.value)} />
             </div>
             <div>
               <Label>Número</Label>
-              <Input
-                value={formData.numero}
-                onChange={(e) => handleInputChange("numero", e.target.value)}
-              />
+              <Input value={formData.numero} onChange={e => handleInputChange("numero", e.target.value)} />
             </div>
             <div>
               <Label>Bairro</Label>
-              <Input
-                value={formData.bairro}
-                onChange={(e) => handleInputChange("bairro", e.target.value)}
-              />
+              <Input value={formData.bairro} onChange={e => handleInputChange("bairro", e.target.value)} />
             </div>
             <div>
               <Label>Cidade</Label>
-              <Input
-                value={formData.cidade}
-                onChange={(e) => handleInputChange("cidade", e.target.value)}
-              />
+              <Input value={formData.cidade} onChange={e => handleInputChange("cidade", e.target.value)} />
             </div>
             <div>
               <Label>Estado</Label>
-              <Select
-                value={formData.estado}
-                onValueChange={(v) => handleInputChange("estado", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={formData.estado} onValueChange={(value) => handleInputChange("estado", value)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {ESTADOS_BRASILEIROS.map((e) => (
-                    <SelectItem key={e.sigla} value={e.sigla}>
-                      {e.nome}
+                  {ESTADOS_BRASILEIROS.map((estado) => (
+                    <SelectItem key={estado.sigla} value={estado.sigla}>
+                      {estado.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Região</Label>
-              <Select
-                value={formData.regiao}
-                onValueChange={(v) =>
-                  handleInputChange("regiao", v as typeof formData.regiao)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"].map(
-                    (r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
               <Label>Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(v) =>
-                  handleInputChange(
-                    "status",
-                    v as "Ativo" | "Inativo" | "Cliente" | "Cancelado" | "Lead"
-                  )
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={formData.status} onValueChange={(value: "Ativo" | "Inativo" | "Cliente" | "Cancelado" | "Lead") => handleInputChange("status", value)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cliente">Cliente</SelectItem>
-                  <SelectItem value="Cancelado">Cancelado</SelectItem>
                   <SelectItem value="Lead">Lead</SelectItem>
+                  <SelectItem value="Cliente">Cliente</SelectItem>
                   <SelectItem value="Ativo">Ativo</SelectItem>
                   <SelectItem value="Inativo">Inativo</SelectItem>
+                  <SelectItem value="Cancelado">Cancelado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {(formData.status === "Lead" || formData.status === "Inativo") && (
-              <div>
-                <Label>Temperatura</Label>
-                <Select
-                  value={formData.temperatura ?? ""}
-                  onValueChange={(v) =>
-                    handleInputChange(
-                      "temperatura",
-                      v as "Quente" | "Morno" | "Frio"
-                    )
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Quente">Quente</SelectItem>
-                    <SelectItem value="Morno">Morno</SelectItem>
-                    <SelectItem value="Frio">Frio</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
             <div>
-              <Label>Visita Feita</Label>
-              <Select
-                value={formData.visitafeita}
-                onValueChange={(v) =>
-                  handleInputChange("visitafeita", v as "Sim" | "Não")
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Label>Temperatura</Label>
+              <Select value={formData.temperatura || ""} onValueChange={(value: "Quente" | "Morno" | "Frio") => handleInputChange("temperatura", value)}>
+                <SelectTrigger><SelectValue placeholder="Selecione a temperatura" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Sim">Sim</SelectItem>
-                  <SelectItem value="Não">Não</SelectItem>
+                  <SelectItem value="Quente">Quente</SelectItem>
+                  <SelectItem value="Morno">Morno</SelectItem>
+                  <SelectItem value="Frio">Frio</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <Checkbox
-                checked={formData.emProjecao}
-                onCheckedChange={(checked) =>
-                  handleInputChange("emProjecao", checked === true)
-                }
-              />
-              <Label>Projeção</Label>
-            </div>
-
-            {/* Upload de imagem */}
-            <div className="space-y-2">
-              <Label>Imagem do Lead</Label>
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="cursor-pointer"
-                  />
-                </div>
-                {imagePreview && (
-                  <div className="w-24 h-24 rounded-md overflow-hidden border">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
           <div>
-            <Label>Detalhes do Status</Label>
-            <Textarea
-              value={formData.detalhesStatus}
-              onChange={(e) =>
-                handleInputChange("detalhesStatus", e.target.value)
-              }
+            <Label>Visita Realizada</Label>
+            <Select value={formData.visitafeita} onValueChange={(value: "Sim" | "Não") => handleInputChange("visitafeita", value)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Não">Não</SelectItem>
+                <SelectItem value="Sim">Sim</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Descrição Detalhada</Label>
+            <textarea 
+              className="w-full p-2 border border-gray-300 rounded-md resize-none"
               rows={3}
+              value={formData.detalhesStatus}
+              onChange={e => handleInputChange("detalhesStatus", e.target.value)}
+              placeholder="Adicione detalhes sobre o lead..."
             />
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit">Salvar Alterações</Button>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="emProjecao"
+              checked={formData.emProjecao}
+              onCheckedChange={(checked) => handleInputChange("emProjecao", !!checked)}
+            />
+            <Label htmlFor="emProjecao">Em Projeção</Label>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Mídias (opcional)</Label>
+            <input type="file" multiple onChange={handleFileUpload} />
+            <div className="flex gap-2 flex-wrap mt-2">
+              {previews.map((p, i) => (
+                <div key={i} className="relative">
+                  <img src={p.url} className="w-20 h-20 object-cover rounded" />
+                  <button type="button" onClick={() => removeMidia(i)} className="absolute top-0 right-0 bg-red-500 text-white rounded-full px-1">x</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button type="submit" disabled={loading}>{loading ? <Loader2 className="animate-spin h-4 w-4" /> : "Salvar Alterações"}</Button>
           </div>
         </form>
       </DialogContent>
